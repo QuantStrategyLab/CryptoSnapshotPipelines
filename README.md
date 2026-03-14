@@ -636,12 +636,16 @@ This is the most important delivery of the project.
 
 ### 1. `data/output/latest_universe.json`
 
+Illustrative abbreviated universe snapshot example:
+
 ```json
 {
   "as_of_date": "2026-03-13",
   "symbols": ["ETHUSDT", "SOLUSDT", "XRPUSDT"]
 }
 ```
+
+This is a research/universe snapshot example, not the official downstream live-pool contract. The official exported pool for downstream consumers is `data/output/live_pool.json` / `data/output/live_pool_legacy.json`, and its exact field semantics are defined in `docs/integration_contract.md`.
 
 ### 2. `data/output/latest_ranking.csv`
 
