@@ -83,6 +83,11 @@ Stable contract fields for downstream validation:
 - `symbol_map`
 - `source_project`
 
+Meaning:
+
+- `pool_size` and `symbols` always describe the full official exported pool for that monthly snapshot
+- downstream display panels, local ranking previews, or final execution targets are separate downstream-layer concepts
+
 Research/reporting extras are intentionally not part of the stable contract. Downstream consumers should not infer live readiness from local research CSVs or validation summaries.
 
 Optional additive research extension:

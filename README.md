@@ -665,14 +665,18 @@ The default live export contains both a simple list and a mapping payload:
 {
   "as_of_date": "2026-03-13",
   "pool_size": 5,
-  "symbols": ["ETHUSDT", "SOLUSDT", "XRPUSDT"],
+  "symbols": ["TRXUSDT", "ETHUSDT", "BCHUSDT", "NEARUSDT", "LTCUSDT"],
   "symbol_map": {
+    "TRXUSDT": {"base_asset": "TRX"},
     "ETHUSDT": {"base_asset": "ETH"},
-    "SOLUSDT": {"base_asset": "SOL"},
-    "XRPUSDT": {"base_asset": "XRP"}
+    "BCHUSDT": {"base_asset": "BCH"},
+    "NEARUSDT": {"base_asset": "NEAR"},
+    "LTCUSDT": {"base_asset": "LTC"}
   }
 }
 ```
+
+Here `pool_size` and `symbols` refer to the full official exported live pool for that snapshot. Downstream display panels or local candidate rankings are separate downstream concepts.
 
 For older scripts that expect the mapping to sit directly under the `symbols` key, the exporter also writes:
 
