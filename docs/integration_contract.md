@@ -180,6 +180,40 @@ data/output/shadow_releases/
 
 This shadow history is additive research infrastructure. It is meant to mimic the monthly upstream artifact sequence without requiring live Firestore or GCS.
 
+## Shadow Candidate Tracks
+
+For dual-track shadow monitoring, the repo can also build:
+
+```text
+data/output/shadow_candidate_tracks/
+  track_summary.csv
+  official_baseline/
+    release_index.csv
+    <YYYY-MM-DD-mode>/
+      live_pool.json
+      live_pool_legacy.json
+      release_manifest.json
+  challenger_topk_60/
+    release_index.csv
+    <YYYY-MM-DD-mode>/
+      live_pool.json
+      live_pool_legacy.json
+      release_manifest.json
+```
+
+Track metadata that downstream may rely on for shadow comparison:
+
+- `profile`
+- `source_track`
+- `candidate_status`
+- `version`
+- `as_of_date`
+- `activation_date`
+- `pool_size`
+- `expected_pool_size`
+
+Baseline remains the official production reference. `challenger_topk_60` is shadow-only in this workflow.
+
 ## Recommended Downstream Read Priority
 
 1. Read Firestore `strategy/CRYPTO_LEADER_ROTATION_LIVE_POOL`

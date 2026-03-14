@@ -20,6 +20,9 @@ def build_shadow_release_history(
     cadence: str = "monthly",
     activation_lag_days: int = 1,
     selection_meta_fields: list[str] | None = None,
+    profile_name: str | None = None,
+    source_track: str | None = None,
+    candidate_status: str | None = None,
 ) -> pd.DataFrame:
     """Build a local versioned artifact history for end-to-end shadow replay."""
     output_path = ensure_directory(output_dir)
@@ -69,12 +72,23 @@ def build_shadow_release_history(
         release_dir = ensure_directory(output_path / version)
         live_pool_path = release_dir / "live_pool.json"
         legacy_path = release_dir / "live_pool_legacy.json"
-        write_json(live_pool_path, payload)
-        write_json(legacy_path, legacy_payload)
 
         activation_date = next_trading_date(available_dates, release_date, lag_days=max(0, int(activation_lag_days)))
         if activation_date is None:
             activation_date = pd.Timestamp(release_date).normalize()
+
+        track_metadata = {
+            "profile": profile_name,
+            "source_track": source_track,
+            "candidate_status": candidate_status,
+            "activation_date": date_to_str(activation_date),
+            "expected_pool_size": int(pool_size),
+        }
+        payload.update({key: value for key, value in track_metadata.items() if value is not None})
+        legacy_payload.update({key: value for key, value in track_metadata.items() if value is not None})
+
+        write_json(live_pool_path, payload)
+        write_json(legacy_path, legacy_payload)
 
         symbols = list(payload["symbols"])
         overlap = len(set(symbols) & set(previous_symbols or []))
@@ -88,7 +102,11 @@ def build_shadow_release_history(
             "mode": payload["mode"],
             "source_project": payload["source_project"],
             "pool_size": payload["pool_size"],
+            "expected_pool_size": int(pool_size),
             "symbols": symbols,
+            "profile": profile_name,
+            "source_track": source_track,
+            "candidate_status": candidate_status,
             "regime": release_regime,
             "regime_confidence": None if pd.isna(release_regime_confidence) else release_regime_confidence,
             "selection_meta_fields": list(selection_meta_fields or []),
@@ -108,7 +126,11 @@ def build_shadow_release_history(
                 "mode": payload["mode"],
                 "source_project": payload["source_project"],
                 "pool_size": payload["pool_size"],
+                "expected_pool_size": int(pool_size),
                 "symbols": "|".join(symbols),
+                "profile": profile_name,
+                "source_track": source_track,
+                "candidate_status": candidate_status,
                 "regime": release_regime,
                 "regime_confidence": release_regime_confidence,
                 "pool_stability": stability,

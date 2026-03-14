@@ -114,6 +114,13 @@ Additional research-only challenger outputs, when generated:
 - `data/reports/challenger_monthly_shadow_detail.csv`
 - `data/reports/challenger_monthly_shadow_by_year.csv`
 - `data/reports/challenger_monthly_shadow_by_regime.csv`
+- `data/output/shadow_candidate_tracks/track_summary.csv`
+
+Shadow candidate status:
+
+- baseline remains the official production reference
+- `challenger_topk_60` is tracked only as a shadow-production candidate
+- shadow candidate artifacts are additive and do not replace the default live build or publish path
 
 ## Publish Chain Validation Completed
 

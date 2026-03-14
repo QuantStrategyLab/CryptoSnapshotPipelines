@@ -238,6 +238,21 @@ shadow_replay:
     - "confidence"
     - "current_rank"
 
+shadow_candidates:
+  root_dir: "data/output/shadow_candidate_tracks"
+  include_selection_meta: true
+  tracks:
+    - track_id: "official_baseline"
+      profile_name: "baseline_blended_rank"
+      target_mode: "blended_rank_pct"
+      source_track: "official_baseline"
+      candidate_status: "official_reference"
+    - track_id: "challenger_topk_60"
+      profile_name: "challenger_topk_60"
+      target_mode: "future_topk_label_60"
+      source_track: "shadow_candidate"
+      candidate_status: "shadow_candidate"
+
 live_build:
   prefilter_enabled: true
   include_previous_live_pool: true
