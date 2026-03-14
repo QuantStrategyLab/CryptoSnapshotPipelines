@@ -13,7 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.backtest import run_single_backtest
 from src.config import load_config
-from src.evaluation import evaluate_leader_selection
+from src.evaluation import evaluate_leader_selection, evaluate_live_pool_shadow, summarize_live_pool_shadow
 from src.pipeline import run_research_pipeline
 from src.utils import get_logger
 
@@ -72,10 +72,25 @@ def main() -> None:
         rows.append(row)
 
     validation_table = pd.DataFrame(rows)
-    output_path = config["paths"].reports_dir / "walkforward_validation_summary.csv"
+    reports_dir = config["paths"].reports_dir
+    output_path = reports_dir / "walkforward_validation_summary.csv"
     validation_table.to_csv(output_path, index=False)
 
+    shadow_detail = evaluate_live_pool_shadow(
+        panel,
+        score_column="final_score",
+        config=config,
+        rebalance_frequency=str(config.get("release", {}).get("cadence", "monthly")),
+        pool_size=int(config["export"]["live_pool_size"]),
+    )
+    shadow_summary = summarize_live_pool_shadow(shadow_detail)
+    shadow_detail_path = reports_dir / "monthly_live_pool_shadow_detail.csv"
+    shadow_summary_path = reports_dir / "monthly_live_pool_shadow_summary.csv"
+    shadow_detail.to_csv(shadow_detail_path, index=False)
+    shadow_summary.to_csv(shadow_summary_path, index=False)
+
     logger.info("Walk-forward validation saved to %s", output_path)
+    logger.info("Monthly live-pool shadow validation saved to %s and %s", shadow_detail_path, shadow_summary_path)
     if not validation_table.empty:
         logger.info("Universe mode: %s", result["universe_mode"])
         logger.info("Validation head:\n%s", validation_table.head().to_string(index=False))

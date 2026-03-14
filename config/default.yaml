@@ -121,6 +121,8 @@ walkforward:
   test_window_days: 120
   step_days: 60
   min_train_dates: 360
+  purge_days: null
+  prediction_aggregation: "mean"
 
 labels:
   horizons: [30, 60, 90]

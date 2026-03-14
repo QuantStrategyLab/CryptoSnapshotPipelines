@@ -29,48 +29,82 @@ It is not enabled by default and it is not part of the default production publis
 
 ## Current Strategy Validation Snapshot
 
-Latest available baseline in this repository:
+Recommended baseline as of `2026-03-14`:
 
 - research universe mode: `broad_liquid`
 - production live mode: `core_major`
 - production data source: `Binance-only`
 - publish cadence: `monthly`
-- live pool version: `2026-03-13-core_major`
+- validation environment: `.venv/bin/python`
+- validation method: `purged walk-forward + overlap aggregation + monthly live-pool shadow`
 
-Current live pool:
+Recommended purged research summary for `final_score`:
 
-- `TRXUSDT`
-- `ETHUSDT`
-- `BCHUSDT`
-- `NEARUSDT`
-- `LTCUSDT`
+- CAGR: `19.38%`
+- Annualized Volatility: `65.04%`
+- Sharpe: `0.5986`
+- Max Drawdown: `-85.56%`
+- Turnover: `12.17`
 
-Latest research summary for `final_score`:
-
-- CAGR: `35.51%`
-- Annualized Volatility: `63.96%`
-- Sharpe: `0.7966`
-- Max Drawdown: `-76.77%`
-- Turnover: `11.99`
-
-Latest walk-forward summary:
+Recommended purged walk-forward summary:
 
 - windows: `31`
-- mean H30 Precision@N: `0.2167`
-- mean H60 Precision@N: `0.2217`
-- mean H90 Precision@N: `0.2231`
-- mean H30 Leader Capture: `0.1843`
-- mean H60 Leader Capture: `0.1833`
-- mean H90 Leader Capture: `0.1935`
-- mean window Sharpe: `0.8810`
-- mean window Turnover: `16.91`
+- mean H30 Precision@N: `0.1822`
+- mean H60 Precision@N: `0.1867`
+- mean H90 Precision@N: `0.1902`
+- mean H30 Leader Capture: `0.1442`
+- mean H60 Leader Capture: `0.1559`
+- mean H90 Leader Capture: `0.1784`
+- mean window Sharpe: `0.6506`
+- mean window Turnover: `17.78`
+
+Monthly live-pool shadow summary:
+
+- evaluation dates: `64`
+- cadence: `monthly`
+- live pool size: `5`
+- mean pool churn: `0.4159`
+- mean H30 pool precision: `0.1742`
+- mean H60 pool precision: `0.1803`
+- mean H90 pool precision: `0.1667`
+- mean H30 leader capture inside pool: `0.2581`
+- mean H60 leader capture inside pool: `0.2951`
+- mean H90 leader capture inside pool: `0.3000`
+
+Methodology hardening summary:
+
+- previous walk-forward validation built forward labels before window slicing and did not purge train-tail rows
+- that allowed some training rows near `train_end` to use future prices that extended into the following test period
+- previous validation also averaged duplicate predictions created by overlapping test windows, which is smoother than the real live path
+- purged walk-forward is now the recommended baseline
+- monthly live-pool shadow validation is now available and better matches the actual exported monthly `5`-name artifact
+- plain `python3` in this workspace may lack required ML dependencies, so `.venv/bin/python` is the intended validation entrypoint
+
+Legacy historical baseline, retained for context only and not directly comparable:
+
+- research CAGR: `47.91%`
+- research Sharpe: `0.9262`
+- mean walk-forward H60 Precision@N: `0.2200`
+- mean walk-forward H60 Leader Capture: `0.1867`
+- mean monthly shadow H60 pool precision: `0.1934`
+- mean monthly shadow H60 leader capture: `0.3115`
 
 Interpretation:
 
 - the project is now usable as an upstream production pool publisher
-- research and walk-forward validation are real and reproducible
+- validation is now methodologically stricter and more realistic than the legacy baseline
 - the default production path is intentionally frozen around Binance-only stability
 - current priority should remain monthly refresh discipline and stable contract publishing rather than further production-path experimentation
+
+Report locations for the hardened baseline:
+
+- `data/reports/performance_summary.csv`
+- `data/reports/leader_metrics.csv`
+- `data/reports/walkforward_validation_summary.csv`
+- `data/reports/monthly_live_pool_shadow_detail.csv`
+- `data/reports/monthly_live_pool_shadow_summary.csv`
+
+These report files are local generated artifacts under `data/reports/` and are not committed to git by default.
 
 ## Publish Chain Validation Completed
 

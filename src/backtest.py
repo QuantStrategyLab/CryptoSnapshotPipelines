@@ -23,12 +23,23 @@ class BacktestResult:
     metrics: dict[str, float]
 
 
+def resolve_walkforward_purge_days(config: dict[str, Any]) -> int:
+    """Resolve the walk-forward label purge/embargo in trading days."""
+    walk_cfg = config.get("walkforward", {})
+    configured = walk_cfg.get("purge_days")
+    if configured is None:
+        horizons = [int(horizon) for horizon in config.get("labels", {}).get("horizons", [])]
+        return max(horizons) if horizons else 0
+    return max(0, int(configured))
+
+
 def build_walkforward_windows(dates: list[pd.Timestamp], config: dict[str, Any]) -> list[dict[str, Any]]:
     """Create rolling train/test windows over a daily crypto calendar."""
     walk_cfg = config["walkforward"]
     train_window = int(walk_cfg["train_window_days"])
     test_window = int(walk_cfg["test_window_days"])
     step_days = int(walk_cfg["step_days"])
+    purge_days = resolve_walkforward_purge_days(config)
 
     ordered_dates = list(pd.DatetimeIndex(dates).sort_values().unique())
     if len(ordered_dates) <= train_window:
@@ -38,8 +49,12 @@ def build_walkforward_windows(dates: list[pd.Timestamp], config: dict[str, Any])
     cursor = train_window
     window_id = 0
     while cursor < len(ordered_dates):
-        train_start = ordered_dates[max(0, cursor - train_window)]
-        train_end = ordered_dates[cursor - 1]
+        train_start_position = max(0, cursor - train_window)
+        train_end_position = cursor - 1
+        effective_train_end_position = max(train_start_position, train_end_position - purge_days)
+        train_start = ordered_dates[train_start_position]
+        train_end = ordered_dates[train_end_position]
+        effective_train_end = ordered_dates[effective_train_end_position]
         test_start = ordered_dates[cursor]
         test_end_position = min(len(ordered_dates) - 1, cursor + test_window - 1)
         test_end = ordered_dates[test_end_position]
@@ -48,8 +63,10 @@ def build_walkforward_windows(dates: list[pd.Timestamp], config: dict[str, Any])
                 "window_id": window_id,
                 "train_start": train_start,
                 "train_end": train_end,
+                "effective_train_end": effective_train_end,
                 "test_start": test_start,
                 "test_end": test_end,
+                "purge_days": purge_days,
             }
         )
         if test_end_position >= len(ordered_dates) - 1:
@@ -57,6 +74,38 @@ def build_walkforward_windows(dates: list[pd.Timestamp], config: dict[str, Any])
         cursor += step_days
         window_id += 1
     return windows
+
+
+def aggregate_walkforward_predictions(
+    prediction_frame: pd.DataFrame,
+    aggregation_mode: str = "mean",
+) -> pd.DataFrame:
+    """Aggregate duplicate OOS predictions created by overlapping test windows."""
+    if prediction_frame.empty:
+        return prediction_frame
+
+    aggregation_mode = str(aggregation_mode).lower()
+    flat = prediction_frame.reset_index().sort_values(["date", "symbol", "window_id"])
+    counts = (
+        flat.groupby(["date", "symbol"], as_index=False)["window_id"]
+        .nunique()
+        .rename(columns={"window_id": "prediction_window_count"})
+    )
+
+    if aggregation_mode == "mean":
+        aggregated = (
+            flat.groupby(["date", "symbol"], as_index=False)[["linear_score_raw", "ml_score_raw"]]
+            .mean()
+        )
+    elif aggregation_mode == "latest":
+        aggregated = flat.groupby(["date", "symbol"], as_index=False).tail(1)[
+            ["date", "symbol", "linear_score_raw", "ml_score_raw", "window_id"]
+        ].rename(columns={"window_id": "prediction_source_window_id"})
+    else:
+        raise ValueError(f"Unsupported walk-forward prediction aggregation mode: {aggregation_mode}")
+
+    aggregated = aggregated.merge(counts, on=["date", "symbol"], how="left")
+    return aggregated.set_index(["date", "symbol"]).sort_index()
 
 
 def run_walkforward_scoring(
@@ -68,17 +117,19 @@ def run_walkforward_scoring(
     panel = panel.copy()
     dates = list(panel.index.get_level_values("date").unique().sort_values())
     windows = build_walkforward_windows(dates, config)
+    aggregation_mode = str(config.get("walkforward", {}).get("prediction_aggregation", "mean")).lower()
 
     all_predictions = []
     window_rows = []
     for window in windows:
         date_index = panel.index.get_level_values("date")
-        train_mask = (
+        pre_purge_train_mask = (
             (date_index >= window["train_start"])
             & (date_index <= window["train_end"])
             & panel["in_universe"]
             & panel["blended_target"].notna()
         )
+        train_mask = pre_purge_train_mask & (date_index <= window["effective_train_end"])
         test_mask = (
             (date_index >= window["test_start"])
             & (date_index <= window["test_end"])
@@ -87,6 +138,10 @@ def run_walkforward_scoring(
         train_df = panel.loc[train_mask].copy()
         test_df = panel.loc[test_mask].copy()
         result = fit_predict_models(train_df, test_df, feature_columns, config)
+        train_dates_pre_purge = int(
+            panel.loc[pre_purge_train_mask].index.get_level_values("date").nunique()
+        )
+        train_dates = int(train_df.index.get_level_values("date").nunique())
 
         if not result.predictions.empty:
             current_predictions = result.predictions.copy()
@@ -96,7 +151,12 @@ def run_walkforward_scoring(
         window_rows.append(
             {
                 **window,
+                "prediction_aggregation": aggregation_mode,
+                "train_rows_pre_purge": int(pre_purge_train_mask.sum()),
+                "purged_train_rows": int(pre_purge_train_mask.sum() - train_mask.sum()),
                 "train_rows": result.train_rows,
+                "train_dates_pre_purge": train_dates_pre_purge,
+                "train_dates": train_dates,
                 "test_rows": result.test_rows,
                 "linear_backend": result.linear_backend,
                 "ml_backend": result.ml_backend,
@@ -105,17 +165,7 @@ def run_walkforward_scoring(
 
     if all_predictions:
         prediction_frame = pd.concat(all_predictions).sort_index()
-        aggregated = (
-            prediction_frame.groupby(level=["date", "symbol"])
-            .agg(
-                {
-                    "linear_score_raw": "mean",
-                    "ml_score_raw": "mean",
-                    "window_id": "nunique",
-                }
-            )
-            .rename(columns={"window_id": "prediction_window_count"})
-        )
+        aggregated = aggregate_walkforward_predictions(prediction_frame, aggregation_mode=aggregation_mode)
         panel = panel.join(aggregated, how="left")
     else:
         panel["linear_score_raw"] = np.nan
@@ -237,4 +287,3 @@ def run_backtest_suite(panel: pd.DataFrame, config: dict[str, Any]) -> dict[str,
             continue
         results[score_column] = run_single_backtest(panel, score_column, config)
     return results
-

@@ -144,6 +144,14 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+For reproducible research and validation in this repository, prefer invoking the environment directly with `.venv/bin/python ...`.
+
+Methodology note:
+
+- the intended validation environment is `.venv/bin/python`
+- plain `python3` in this workspace may not have `scikit-learn` or a usable `lightgbm`
+- if that happens, the code can silently fall back to weaker backends and produce non-comparable metrics
+
 If `lightgbm` is not available in your environment, the code automatically falls back to:
 
 - `HistGradientBoostingRegressor`
@@ -174,19 +182,19 @@ This keeps the project easy to tune without scattering magic numbers across file
 Full download/update:
 
 ```bash
-python scripts/download_history.py
+.venv/bin/python scripts/download_history.py
 ```
 
 Quick smoke test with a smaller set:
 
 ```bash
-python scripts/download_history.py --limit 20
+.venv/bin/python scripts/download_history.py --limit 20
 ```
 
 Specific symbols:
 
 ```bash
-python scripts/download_history.py --symbols BTCUSDT ETHUSDT SOLUSDT XRPUSDT
+.venv/bin/python scripts/download_history.py --symbols BTCUSDT ETHUSDT SOLUSDT XRPUSDT
 ```
 
 The downloader:
@@ -201,38 +209,53 @@ The downloader:
 1. Download data
 
 ```bash
-python scripts/download_history.py --limit 30
+.venv/bin/python scripts/download_history.py --limit 30
 ```
 
 2. Run research/backtest
 
 ```bash
-python scripts/run_research_backtest.py
+.venv/bin/python scripts/run_research_backtest.py
 ```
 
 3. Run walk-forward validation
 
 ```bash
-python scripts/run_walkforward_validation.py
+.venv/bin/python scripts/run_walkforward_validation.py
 ```
 
 4. Build live exports for the downstream strategy
 
 ```bash
-python scripts/build_live_pool.py
+.venv/bin/python scripts/build_live_pool.py
 ```
 
 5. Prepare a monthly release payload
 
 ```bash
-python scripts/publish_release.py --dry-run
+.venv/bin/python scripts/publish_release.py --dry-run
 ```
 
 6. Debug one historical date if needed
 
 ```bash
-python scripts/debug_single_date_snapshot.py 2024-03-31
+.venv/bin/python scripts/debug_single_date_snapshot.py 2024-03-31
 ```
+
+## Recommended Validation Baseline
+
+The recommended research baseline is now:
+
+- purged walk-forward validation
+- configurable overlap aggregation, with `mean` kept as the default historical bridge and `latest` available as a stricter realism check
+- additive monthly live-pool shadow validation aligned to the exported `live_pool.json` artifact
+
+Methodology hardening note:
+
+- older walk-forward reports in this repository were generated before train-tail purging was added
+- those legacy runs could let training rows near the boundary use forward labels whose price window extended into the next test segment
+- older reports also averaged duplicate predictions from overlapping test windows, which is smoother than the real live path
+- those older optimistic metrics should be treated as historical / legacy and are not directly comparable to the hardened baseline
 
 ## Dynamic Universe Logic
 
@@ -377,33 +400,44 @@ using either default weights or regime-specific weights from `config/default.yam
 
 This repository does not train on the full sample and then look backward.
 
-The validation loop is rolling and strictly out-of-sample:
+The recommended validation loop is rolling, purged at the train/test boundary, and out-of-sample:
 
 - rolling train window
 - rolling test window
 - forward step
+- train-tail purge sized from the label horizons by default
 - signal formed on day `t`
 - portfolio executed on day `t+1`
 - daily PnL approximated with open-to-open returns
+- overlapping-window prediction aggregation configurable as `mean` or `latest`
 
 Default settings:
 
 - train window: 720 days
 - test window: 120 days
 - step: 60 days
+- purge: max configured label horizon unless overridden
+- overlap aggregation: `mean`
 - rebalance: weekly
 - top N: 3
 
 Run it with:
 
 ```bash
-python scripts/run_walkforward_validation.py
+.venv/bin/python scripts/run_walkforward_validation.py
 ```
+
+Legacy comparison note:
+
+- historical walk-forward summaries produced before this hardening pass may look better because they did not purge train tails and they averaged overlapping test-window predictions by default
+- those historical metrics are useful as archive context only and should not be used as the recommended baseline going forward
 
 Outputs include:
 
 - `data/reports/walkforward_windows.csv`
 - `data/reports/walkforward_validation_summary.csv`
+- `data/reports/monthly_live_pool_shadow_detail.csv`
+- `data/reports/monthly_live_pool_shadow_summary.csv`
 - `data/reports/performance_summary.csv`
 - `data/reports/leader_metrics.csv`
 - `data/reports/equity_curves.png`
@@ -490,13 +524,13 @@ For older scripts that expect the mapping to sit directly under the `symbols` ke
 Run the live builder with:
 
 ```bash
-python scripts/build_live_pool.py
+.venv/bin/python scripts/build_live_pool.py
 ```
 
 You can also build a historical live snapshot:
 
 ```bash
-python scripts/build_live_pool.py --as-of-date 2024-03-31
+.venv/bin/python scripts/build_live_pool.py --as-of-date 2024-03-31
 ```
 
 The production monthly release path defaults to the stricter `core_major` universe mode. Research and walk-forward validation continue to use `broad_liquid`.
@@ -508,7 +542,7 @@ Production defaults today are:
 - `release.channel: production`
 - `release.production_profile: binance_only_core_major_monthly`
 
-So running `python scripts/build_live_pool.py` with no extra flags builds the frozen Production v1 path, not the experimental external-data path.
+So running `.venv/bin/python scripts/build_live_pool.py` with no extra flags builds the frozen Production v1 path, not the experimental external-data path.
 
 ## Monthly Publish Chain
 
@@ -746,7 +780,7 @@ The current merge policy is:
 Local validation of the merge logic:
 
 ```bash
-python scripts/validate_external_data.py
+.venv/bin/python scripts/validate_external_data.py
 ```
 
 ## Validation Status
@@ -768,7 +802,7 @@ That document summarizes:
 To inspect one historical date:
 
 ```bash
-python scripts/debug_single_date_snapshot.py 2024-03-31
+.venv/bin/python scripts/debug_single_date_snapshot.py 2024-03-31
 ```
 
 This exports a detailed snapshot file into `data/output/` containing:
@@ -790,7 +824,7 @@ This repository is built around point-in-time discipline:
 - universe refresh happens on the snapshot date only
 - features use rolling windows over current and past data only
 - labels are created separately and used only for training/evaluation
-- walk-forward windows never train on future rows
+- the recommended purged walk-forward path excludes train-tail rows whose forward labels would extend past the train boundary
 - the live builder trains only on dates whose forward labels are already fully known
 - portfolio signals are formed on `t` and executed on `t+1`
 
