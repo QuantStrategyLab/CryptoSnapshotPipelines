@@ -1,0 +1,384 @@
+# crypto-leader-rotation
+
+语言: [English](README.md) | 简体中文
+
+`crypto-leader-rotation` 是一个“研究 + 生产发布”结合的 Python 项目，它的职责不是交易，而是为下游执行脚本提供更稳定、更高质量的 Binance Spot 主流币候选池和 leader 排名结果。
+
+这个仓库**不下单**、**不包含 live 执行逻辑**。它的核心交付物是一个可稳定发布的上游选择器，默认输出：
+
+1. `data/output/latest_universe.json`
+2. `data/output/latest_ranking.csv`
+3. `data/output/live_pool.json`
+
+## 当前状态
+
+仓库目前明确分成两条线：
+
+- `Production v1`
+  - 数据源：仅 `Binance Spot`
+  - universe mode：`core_major`
+  - 发布频率：`monthly`
+  - 默认输出：`latest_universe.json`、`latest_ranking.csv`、`live_pool.json`、`live_pool_legacy.json`
+- `Experimental external-data track`
+  - 仅用于研究、比较和验证
+  - 默认不启用
+  - 不属于生产发布默认路径
+
+当前默认生产路径已经冻结在 `Production v1`。外部数据分支仍保留在仓库中，但在它没证明自己长期稳定优于 Binance-only 之前，它都只是实验路线。
+
+## 这个项目为什么存在
+
+大多数交易系统会把三件事混在一起：
+
+1. universe 构建
+2. leader 识别与排序
+3. 下单执行
+
+这个项目只做前两件事。它的目标是作为下游量化脚本的**上游选择器**，回答一个更窄的问题：
+
+在每个调仓时点，只使用当时可见的 Binance Spot 日线数据，哪些流动性足够的主流币值得进入候选池？它们里面谁更像未来 30/60/90 天的阶段领涨者？
+
+这样做的好处是：
+
+- 更容易解释
+- 更容易审计
+- 更容易做严格 walk-forward 验证
+- 更容易接入不同的下游执行系统
+- 不会把模型研究和执行细节绑死在一起
+
+## 为什么不优先做深度学习
+
+在只有 Binance Spot 日线 OHLCV 的条件下，深度学习通常不是第一选择：
+
+- 信号噪声比有限
+- 样本量相对模型容量偏小
+- 可解释性更差
+- 更容易过拟合
+- walk-forward 稳健性通常更差
+
+这个仓库走的是更务实的路线：
+
+`硬过滤 universe + 稳健特征库 + 规则基线 + 轻量 ML + regime-aware blending + walk-forward validation`
+
+## 数据源
+
+当前版本只使用 Binance Spot 公开数据：
+
+- `exchangeInfo`
+- symbol 元数据
+- 日线 klines
+- 本地 CSV 缓存
+- 增量更新
+- 每个 symbol 一份原始文件
+
+当前**不使用**：
+
+- 市值
+- 链上数据
+- 资金费率
+- 情绪数据
+- 第三方数据源
+
+## 仓库结构
+
+```text
+crypto-leader-rotation/
+  .github/
+    workflows/
+      monthly_publish.yml
+  README.md
+  README.zh-CN.md
+  requirements.txt
+  .gitignore
+  config/
+    default.yaml
+  docs/
+    integration_contract.md
+    external_data_roadmap.md
+    validation_status.md
+  data/
+    raw/
+    cache/
+    processed/
+    models/
+    reports/
+    output/
+  notebooks/
+    research_notes.md
+  scripts/
+    download_history.py
+    build_live_pool.py
+    publish_release.py
+    write_release_heartbeat.py
+    validate_external_data.py
+    run_research_backtest.py
+    run_walkforward_validation.py
+    debug_single_date_snapshot.py
+    run_monthly_shadow_build.py
+    run_monthly_build_telegram.py
+    run_monthly_review_briefing.py
+  src/
+    ...
+```
+
+## 安装
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+建议统一使用 `.venv/bin/python ...` 来运行研究、验证和月度流程，避免环境差异导致结果不可比。
+
+## 配置
+
+主要参数都在 `config/default.yaml` 中，包括：
+
+- 数据目录和时间范围
+- universe 过滤阈值
+- rebalance 设置
+- walk-forward 窗口
+- 标签 horizon 和 `future_top_k`
+- 规则排序方案
+- regime-specific ensemble 权重
+- ML backend 设置
+- 输出设置
+- GCS / Firestore 发布设置
+
+## 最小可运行流程
+
+1. 下载历史数据
+
+```bash
+.venv/bin/python scripts/download_history.py --limit 30
+```
+
+2. 跑研究回测
+
+```bash
+.venv/bin/python scripts/run_research_backtest.py
+```
+
+3. 跑 walk-forward 验证
+
+```bash
+.venv/bin/python scripts/run_walkforward_validation.py
+```
+
+4. 构建下游要消费的 live pool
+
+```bash
+.venv/bin/python scripts/build_live_pool.py
+```
+
+5. 生成月度发布 dry-run manifest
+
+```bash
+.venv/bin/python scripts/publish_release.py --dry-run
+```
+
+6. 如有需要，调试某个历史日期
+
+```bash
+.venv/bin/python scripts/debug_single_date_snapshot.py 2024-03-31
+```
+
+## 推荐验证基线
+
+当前推荐的验证基线是：
+
+- purged walk-forward validation
+- overlap aggregation 可配置，默认保留 `mean`，也支持更严格的 `latest`
+- 与 `live_pool.json` 对齐的月度 live-pool shadow validation
+
+历史上一些更早的报告是在方法收紧前生成的，不能和现在的 hardened baseline 直接横向比较。
+
+## 下游 live-pool 契约
+
+下游应该依赖的是**每月发布的 live pool 契约**，不是研究报告。
+
+下游消费者应主要依赖这些字段：
+
+- `as_of_date`
+- `version`
+- `mode`
+- `pool_size`
+- `symbols`
+- `symbol_map`
+- `source_project`
+
+这些字段会出现在：
+
+- `data/output/live_pool.json`
+- `data/output/live_pool_legacy.json`
+- Firestore summary document
+
+一些发布期辅助字段，例如：
+
+- `storage_prefix`
+- `current_prefix`
+- `live_pool_uri`
+- `live_pool_legacy_uri`
+- `latest_universe_uri`
+- `latest_ranking_uri`
+
+它们是分发元数据，不是研究特征。
+
+更多细节见：
+
+- `docs/integration_contract.md`
+
+## Shadow Replay 支持
+
+为了支持下游 end-to-end 本地 replay，这个仓库可以构建版本化的月度 shadow release 历史，输出到：
+
+- `data/output/shadow_releases/`
+
+每个 shadow release 目录里包含：
+
+- `live_pool.json`
+- `live_pool_legacy.json`
+- `release_manifest.json`
+
+根目录还会有 `release_index.csv`，供下游按月回放历史上游产物。
+
+## Shadow Candidate Track
+
+当前 baseline 仍然是官方生产参考。
+
+`challenger_topk_60` 只作为附加的 shadow candidate 保存在：
+
+- `data/output/shadow_candidate_tracks/`
+
+双轨约定是：
+
+- `official_baseline`
+  - profile: `baseline_blended_rank`
+  - source track: `official_baseline`
+  - candidate status: `official_reference`
+- `challenger_topk_60`
+  - profile: `challenger_topk_60`
+  - source track: `shadow_candidate`
+  - candidate status: `shadow_candidate`
+
+这些 shadow candidate 产物用于比较和 paper monitoring，不替代 `live_pool.json`，也不意味着 live 切换。
+
+## Monthly Shadow Build
+
+当前月度操作流程是：
+
+1. 构建 official baseline live artifacts
+2. 运行 baseline publish dry-run 检查
+3. 刷新双轨 shadow candidate 历史
+
+标准命令：
+
+```bash
+.venv/bin/python scripts/run_monthly_shadow_build.py
+```
+
+或：
+
+```bash
+make monthly-shadow-build
+```
+
+标准输出：
+
+- official baseline
+  - `data/output/live_pool.json`
+  - `data/output/live_pool_legacy.json`
+  - `data/output/release_manifest.json`
+- shadow candidate tracks
+  - `data/output/shadow_candidate_tracks/track_summary.csv`
+  - `data/output/shadow_candidate_tracks/official_baseline/release_index.csv`
+  - `data/output/shadow_candidate_tracks/challenger_topk_60/release_index.csv`
+  - `data/output/monthly_shadow_build_summary.json`
+
+baseline 始终是官方生产参考，`challenger_topk_60` 始终保持 shadow-only。
+
+## Monthly Build Telegram Notify
+
+可选的月度构建/发布健康度通知：
+
+```bash
+.venv/bin/python scripts/run_monthly_build_telegram.py
+```
+
+或：
+
+```bash
+make monthly-build-telegram
+```
+
+环境变量：
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+它的行为是：
+
+- 只发送简短的 monthly build/publish health summary
+- 使用已有的 `monthly_shadow_build_summary.json`、`live_pool.json`、`release_manifest.json`、`track_summary.csv`
+- 如果 Telegram 凭证缺失，会跳过而不是报错中断
+- 不改变 monthly build 行为，也不是 review 包生成器
+
+## Monthly Review Package
+
+这个仓库现在也提供一份**只读月度 review 包**：
+
+```bash
+.venv/bin/python scripts/run_monthly_review_briefing.py
+```
+
+或：
+
+```bash
+make monthly-review-briefing
+```
+
+输出文件：
+
+- `data/output/monthly_review.md`
+- `data/output/monthly_review.json`
+- `data/output/monthly_review_prompt.md`
+
+它的用途是：
+
+- 只使用上游自己的 monthly build 输出
+- 汇总 official baseline 发布状态、publish manifest 状态、shadow track 覆盖情况
+- 当月度产物在 `as_of_date`、`version`、`mode` 上不一致时，明确报 warning
+- 生成一份结构化的人工复核 prompt / checklist
+- 这是 reporting-only，不会改变 monthly build 行为
+
+## Dynamic Universe Logic
+
+universe 是硬过滤层，不是最终持仓集合。
+
+每个历史时点都只使用当时可见的数据来决定某个 symbol 是否应该进入候选 universe。
+
+基础过滤条件：
+
+- `status == TRADING`
+- `quoteAsset == USDT`
+- `isSpotTradingAllowed == True`
+
+显式排除：
+
+- `BTCUSDT`
+- `BNBUSDT`
+- 稳定币相关资产，如 `USDC`、`FDUSD`、`TUSD`、`USDP`、`DAI`、`PAX`
+- 杠杆方向币，如 `UP`、`DOWN`、`BULL`、`BEAR`
+
+## 特征库
+
+特征库覆盖但不限于：
+
+- 相对 BTC 强弱
+- 绝对趋势质量
+- 风险调整后的动量和回撤
+- 流动性和可交易性
+- BTC 与市场环境
+
+完整细节仍建议以英文 README 和 `src/` 中实现为准。

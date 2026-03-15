@@ -1,5 +1,7 @@
 # crypto-leader-rotation
 
+Language: English | [简体中文](README.zh-CN.md)
+
 `crypto-leader-rotation` is a research-plus-production Python project whose only job is to provide a higher-quality Binance Spot mainstream-coin universe and leader candidate pool to a separate downstream strategy script.
 
 This repository does not place trades and does not contain live execution logic. Its deliverable is a stable upstream selector that can export:
