@@ -230,6 +230,14 @@ Require a generated manifest as part of the check:
 
 Operator workflow details, rollback steps, and research-vs-production boundaries are documented in `docs/operator_runbook.md`.
 
+Fixture-driven CLI smoke for `build_live_pool.py`:
+
+```bash
+.venv/bin/python -m unittest tests.test_build_live_pool_smoke -v
+```
+
+This smoke uses committed fixtures, does not require publish credentials, and still verifies that the script writes outputs that satisfy the release contract.
+
 ## Minimal Runnable Flow
 
 1. Download data

@@ -1,0 +1,31 @@
+{
+  "as_of_date": "2026-03-13",
+  "version": "2026-03-13-core_major",
+  "mode": "core_major",
+  "pool_size": 5,
+  "symbols": [
+    "TRXUSDT",
+    "ETHUSDT",
+    "BCHUSDT",
+    "NEARUSDT",
+    "SOLUSDT"
+  ],
+  "symbol_map": {
+    "TRXUSDT": {
+      "base_asset": "TRX"
+    },
+    "ETHUSDT": {
+      "base_asset": "ETH"
+    },
+    "BCHUSDT": {
+      "base_asset": "BCH"
+    },
+    "NEARUSDT": {
+      "base_asset": "NEAR"
+    },
+    "SOLUSDT": {
+      "base_asset": "SOL"
+    }
+  },
+  "source_project": "crypto-leader-rotation"
+}

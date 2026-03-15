@@ -1,0 +1,8 @@
+as_of_date,symbol,rule_score,linear_score,ml_score,final_score,regime,confidence,selected_flag,current_rank
+2026-03-13,TRXUSDT,1.0,1.0,0.71,0.93,risk_off,0.74,True,1
+2026-03-13,ETHUSDT,0.71,0.71,0.86,0.75,risk_off,0.70,True,2
+2026-03-13,BCHUSDT,0.57,0.57,1.0,0.68,risk_off,0.45,True,3
+2026-03-13,NEARUSDT,0.86,0.29,0.29,0.57,risk_off,0.26,True,4
+2026-03-13,SOLUSDT,0.43,0.43,0.57,0.46,risk_off,0.53,True,5
+2026-03-13,XRPUSDT,0.29,0.86,0.43,0.46,risk_off,0.27,False,6
+2026-03-13,SUIUSDT,0.14,0.14,0.14,0.14,risk_off,0.89,False,7
