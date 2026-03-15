@@ -43,7 +43,9 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          REQ_FILE="requirements-lock.txt"
+          if [ ! -f "${REQ_FILE}" ]; then REQ_FILE="requirements.txt"; fi
+          pip install -r "${REQ_FILE}"
 
       - name: Download Or Update Raw History
         run: python scripts/download_history.py --top-liquid "${DOWNLOAD_TOP_LIQUID}" --force-exchange-info

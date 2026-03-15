@@ -143,10 +143,18 @@ crypto-leader-rotation/
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+REQ_FILE="requirements-lock.txt"
+if [ ! -f "$REQ_FILE" ]; then REQ_FILE="requirements.txt"; fi
+pip install -r "$REQ_FILE"
 ```
 
 For reproducible research and validation in this repository, prefer invoking the environment directly with `.venv/bin/python ...`.
+
+Dependency policy:
+
+- `requirements.txt` remains the human-maintained top-level dependency declaration.
+- `requirements-lock.txt` captures the pinned release dependency set and is the preferred install target for CI, self-hosted publish runners, and operator smoke checks.
+- If you intentionally change dependency versions, update both files together so local dry-runs and scheduled publishes stay aligned.
 
 Methodology note:
 

@@ -1,0 +1,11 @@
+pandas==2.3.3
+numpy==2.0.2
+requests==2.32.5
+matplotlib==3.9.4
+PyYAML==6.0.3
+lightgbm==4.6.0
+scikit-learn==1.6.1
+scipy==1.13.1
+joblib==1.5.3
+google-cloud-storage==3.9.0
+google-cloud-firestore==2.25.0
