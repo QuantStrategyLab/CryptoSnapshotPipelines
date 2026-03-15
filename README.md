@@ -206,6 +206,20 @@ The downloader:
 - saves one CSV per symbol under `data/raw/`
 - supports incremental daily updates
 
+## Release Contract Smoke Check
+
+Validate the local production artifacts before publish or rollback:
+
+```bash
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5
+```
+
+Require a generated manifest as part of the check:
+
+```bash
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-manifest
+```
+
 ## Minimal Runnable Flow
 
 1. Download data

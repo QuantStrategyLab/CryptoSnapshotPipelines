@@ -7,6 +7,7 @@ from typing import Any
 
 import pandas as pd
 
+from .release_contract import assert_release_outputs
 from .utils import read_json, write_json
 
 
@@ -151,6 +152,38 @@ def load_release_artifacts(output_dir: Path | str, mode: str) -> ReleaseArtifact
         live_pool=live_pool,
         live_pool_legacy=live_pool_legacy,
     )
+
+
+def ensure_publish_preflight(
+    settings: PublishSettings,
+    output_dir: Path | str,
+    *,
+    expected_pool_size: int | None = None,
+    reference_date: Any = None,
+    max_age_days: int | None = None,
+    require_freshness: bool = True,
+) -> dict[str, Any]:
+    validation = assert_release_outputs(
+        output_dir,
+        expected_mode=settings.mode,
+        expected_source_project=settings.source_project,
+        expected_pool_size=expected_pool_size,
+        reference_date=reference_date,
+        max_age_days=max_age_days,
+        require_manifest=False,
+        require_freshness=require_freshness,
+    )
+    if settings.dry_run:
+        return validation
+    if not settings.gcp_project_id:
+        raise ValueError("Publish preflight failed: GCP_PROJECT_ID is required for a real publish.")
+    if not settings.gcs_bucket:
+        raise ValueError("Publish preflight failed: GCS_BUCKET is required for a real publish.")
+    if not str(settings.firestore_collection).strip():
+        raise ValueError("Publish preflight failed: Firestore collection must be configured.")
+    if not str(settings.firestore_document).strip():
+        raise ValueError("Publish preflight failed: Firestore document must be configured.")
+    return validation
 
 
 def build_storage_layout(settings: PublishSettings, artifacts: ReleaseArtifacts) -> dict[str, Any]:
@@ -307,6 +340,8 @@ def run_release_publish(
     gcs_bucket: str | None = None,
     firestore_collection: str | None = None,
     firestore_document: str | None = None,
+    max_age_days: int | None = 45,
+    require_freshness: bool = True,
 ) -> dict[str, Any]:
     settings = resolve_publish_settings(
         config,
@@ -317,11 +352,27 @@ def run_release_publish(
         firestore_collection=firestore_collection,
         firestore_document=firestore_document,
     )
+    validation = ensure_publish_preflight(
+        settings,
+        config["paths"].output_dir,
+        expected_pool_size=int(config["export"]["live_pool_size"]),
+        max_age_days=max_age_days,
+        require_freshness=require_freshness,
+    )
     artifacts = load_release_artifacts(config["paths"].output_dir, settings.mode)
     storage_layout = build_storage_layout(settings, artifacts)
     firestore_payload = build_firestore_payload(settings, artifacts, storage_layout)
     manifest = build_release_manifest(settings, artifacts, storage_layout, firestore_payload)
     manifest_path = write_release_manifest(artifacts.output_dir, manifest)
+    validation = assert_release_outputs(
+        artifacts.output_dir,
+        expected_mode=settings.mode,
+        expected_source_project=settings.source_project,
+        expected_pool_size=int(config["export"]["live_pool_size"]),
+        max_age_days=max_age_days,
+        require_manifest=True,
+        require_freshness=require_freshness,
+    )
 
     upload_release_artifacts(settings, artifacts, storage_layout)
     publish_firestore_summary(settings, firestore_payload)
@@ -332,4 +383,5 @@ def run_release_publish(
         "storage_layout": storage_layout,
         "firestore_payload": firestore_payload,
         "manifest_path": manifest_path,
+        "validation": validation,
     }
