@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -105,6 +109,34 @@ class MonthlyBuildTelegramTests(unittest.TestCase):
         self.assertEqual(payload["as_of_date"], "2026-03-13")
         self.assertFalse(payload["shadow_tracks"]["official_baseline"]["available"])
         self.assertIn("shadow: not_generated_in_this_run", message)
+
+    def test_main_falls_back_to_global_telegram_chat_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            self.write_fixture_files(root)
+            args = type(
+                "Args",
+                (),
+                {
+                    "output_dir": root / "data" / "output",
+                    "output_path": None,
+                    "print_only": False,
+                },
+            )()
+            stdout = StringIO()
+            with patch.object(MODULE, "parse_args", return_value=args), patch.object(
+                MODULE, "send_telegram_message"
+            ) as send_message, patch.dict(
+                os.environ,
+                {"TELEGRAM_BOT_TOKEN": "test-token", "GLOBAL_TELEGRAM_CHAT_ID": "shared-chat-id"},
+                clear=True,
+            ), redirect_stdout(stdout):
+                MODULE.main()
+
+        send_message.assert_called_once()
+        self.assertEqual(send_message.call_args.args[0], "test-token")
+        self.assertEqual(send_message.call_args.args[1], "shared-chat-id")
+        self.assertIn("telegram_send=ok", stdout.getvalue())
 
 
 if __name__ == "__main__":

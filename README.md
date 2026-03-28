@@ -481,6 +481,7 @@ Environment:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `GLOBAL_TELEGRAM_CHAT_ID` (fallback when `TELEGRAM_CHAT_ID` is not set)
 
 Behavior:
 
@@ -1014,11 +1015,13 @@ This workflow currently reads:
 From `secrets.*`:
 
 - `GCP_SERVICE_ACCOUNT_KEY`
-- `GCP_PROJECT_ID`
-- `GCS_BUCKET`
+- `GCP_PROJECT_ID` (fallback only)
+- `GCS_BUCKET` (fallback only)
 
 From `vars.*`:
 
+- `GCP_PROJECT_ID`
+- `GCS_BUCKET`
 - `PUBLISH_ENABLED`
 - `PUBLISH_MODE`
 - `DOWNLOAD_TOP_LIQUID`
@@ -1033,14 +1036,14 @@ Practical setup paths:
    - `gh secret set ...`
    - `gh variable set ...`
 
-The workflow uses `secrets.*` for credentials and sensitive deployment parameters, and `vars.*` for non-secret operational toggles.
+The workflow uses `secrets.*` for credentials. Non-secret publish targets such as `GCP_PROJECT_ID` and `GCS_BUCKET` now prefer `vars.*`, while keeping `secrets.*` as a backward-compatible fallback.
 
 Recommended first setup:
 
 ```bash
 gh secret set GCP_SERVICE_ACCOUNT_KEY < gcp-service-account.json
-gh secret set GCP_PROJECT_ID --body "your-gcp-project"
-gh secret set GCS_BUCKET --body "your-release-bucket"
+gh variable set GCP_PROJECT_ID --body "your-gcp-project"
+gh variable set GCS_BUCKET --body "your-release-bucket"
 
 gh variable set PUBLISH_ENABLED --body "true"
 gh variable set PUBLISH_MODE --body "core_major"

@@ -23,8 +23,8 @@ jobs:
       DOWNLOAD_TOP_LIQUID: ${{ vars.DOWNLOAD_TOP_LIQUID || '90' }}
       FIRESTORE_COLLECTION: ${{ vars.FIRESTORE_COLLECTION || 'strategy' }}
       FIRESTORE_DOCUMENT: ${{ vars.FIRESTORE_DOCUMENT || 'CRYPTO_LEADER_ROTATION_LIVE_POOL' }}
-      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
+      GCS_BUCKET: ${{ vars.GCS_BUCKET || secrets.GCS_BUCKET }}
 
     steps:
       - name: Checkout

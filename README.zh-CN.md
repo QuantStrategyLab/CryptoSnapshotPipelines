@@ -317,6 +317,7 @@ make monthly-build-telegram
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `GLOBAL_TELEGRAM_CHAT_ID`（当 `TELEGRAM_CHAT_ID` 未设置时回退）
 
 它的行为是：
 
@@ -375,6 +376,28 @@ AI 审阅覆盖范围：
 
 ```bash
 gh secret set ANTHROPIC_API_KEY --body "sk-ant-..."
+```
+
+### Monthly Publish 的 GitHub 配置
+
+`monthly_publish.yml` 现在这样读取配置：
+
+- `GCP_SERVICE_ACCOUNT_KEY` 继续放在 GitHub secret
+- `GCP_PROJECT_ID`、`GCS_BUCKET` 优先从 GitHub variable 读取
+- 如果这两个旧值还在 secret 里，也会继续兼容
+
+推荐配置：
+
+```bash
+gh secret set GCP_SERVICE_ACCOUNT_KEY < gcp-service-account.json
+
+gh variable set GCP_PROJECT_ID --body "your-gcp-project"
+gh variable set GCS_BUCKET --body "your-release-bucket"
+gh variable set PUBLISH_ENABLED --body "true"
+gh variable set PUBLISH_MODE --body "core_major"
+gh variable set DOWNLOAD_TOP_LIQUID --body "90"
+gh variable set FIRESTORE_COLLECTION --body "strategy"
+gh variable set FIRESTORE_DOCUMENT --body "CRYPTO_LEADER_ROTATION_LIVE_POOL"
 ```
 
 AI 审阅 workflow 运行在 `ubuntu-latest`（不需要 self-hosted runner），每月运行一次费用约 $0.01-0.05。

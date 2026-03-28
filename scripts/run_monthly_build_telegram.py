@@ -213,9 +213,9 @@ def main() -> None:
         return
 
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip() or os.getenv("GLOBAL_TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
-        print("telegram_send=skipped missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID")
+        print("telegram_send=skipped missing TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID/GLOBAL_TELEGRAM_CHAT_ID")
         return
 
     try:
