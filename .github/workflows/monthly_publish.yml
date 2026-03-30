@@ -81,7 +81,7 @@ jobs:
         run: cat data/output/monthly_report_bundle/job_summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Monthly Report Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.monthly-report.outputs.artifact_name }}
           path: data/output/monthly_report_bundle
