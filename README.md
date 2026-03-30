@@ -24,7 +24,7 @@ Core upstream artifacts:
 - monthly release status summaries and review outputs
 - release heartbeat records and optional monthly Telegram health notifications
 
-`BinanceQuant` is a downstream execution engine. It should consume the validated live-pool contract and publish metadata, then apply freshness checks, fallback logic, execution, and risk controls. It should not become a second monthly reporting or research-summary system.
+`BinancePlatform` is a downstream execution engine. It should consume the validated live-pool contract and publish metadata, then apply freshness checks, fallback logic, execution, and risk controls. It should not become a second monthly reporting or research-summary system.
 
 In practice, that means:
 
@@ -525,7 +525,7 @@ The AI review covers:
 
 - **Release consistency**: cross-checks `live_pool.json`, `release_manifest.json`, and `release_status_summary.json` for agreement on date, version, mode, pool size, and symbols
 - **Anomaly detection**: flags unexpected warnings, stale artifacts, validation failures, or suspicious ranking scores
-- **Downstream impact**: notes implications for BinanceQuant (the downstream execution engine), including pool changes and degradation risk
+- **Downstream impact**: notes implications for BinancePlatform (the downstream execution engine), including pool changes and degradation risk
 - **Operator action items**: summarizes the checklist and adds any AI-identified follow-up items
 - **Code improvements**: if concrete, low-risk improvements are found, Claude may open a Pull Request (never auto-merged)
 

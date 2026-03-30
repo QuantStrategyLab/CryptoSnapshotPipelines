@@ -361,7 +361,7 @@ AI 审阅覆盖范围：
 
 - **发布一致性**：交叉检查 `live_pool.json`、`release_manifest.json`、`release_status_summary.json` 在日期、版本、模式、池大小和币种上是否一致
 - **异常检测**：标记意外的 warning、过时的产物、验证失败或可疑的排名分数
-- **下游影响**：分析对 BinanceQuant（下游执行引擎）的影响，包括池子变动和降级风险
+- **下游影响**：分析对 BinancePlatform（下游执行引擎）的影响，包括池子变动和降级风险
 - **操作员待办事项**：汇总 checklist 并补充 AI 识别出的跟进事项
 - **代码改进**：如果发现具体、低风险的改进，Claude 可能会自动提 PR（不会自动合并）
 
