@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.prepare_auto_optimization_pr import build_payload, parse_actions, render_pr_body
+from scripts.prepare_auto_optimization_pr import build_payload, evaluate_changed_files, parse_actions, render_pr_body
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +45,8 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
         self.assertFalse(payload["should_run"])
         self.assertEqual(payload["safe_task_count"], 0)
         self.assertEqual(payload["skipped_task_count"], 2)
+        self.assertEqual(payload["auto_merge_candidate_count"], 0)
+        self.assertFalse(payload["task_level_auto_merge_allowed"])
         self.assertEqual(
             [action["title"] for action in payload["skipped_actions"]],
             [
@@ -53,7 +55,35 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
             ],
         )
 
-    def test_render_pr_body_contains_marker_and_issue_reference(self) -> None:
+    def test_build_payload_marks_readme_note_as_auto_merge_candidate(self) -> None:
+        issue_context = {
+            "number": 30,
+            "title": "Monthly Optimization Tasks · Sandbox",
+            "body": """# Monthly Optimization Tasks · Sandbox
+
+## Actions
+- [ ] `low` Add a short README note [auto-pr-safe]
+  - Summary: Document a small operator-facing behavior.
+  - Source: [Sandbox #1](https://example.com/issues/1)
+""",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = build_payload(issue_context, repo_root=Path(temp_dir))
+        self.assertTrue(payload["should_run"])
+        self.assertEqual(payload["safe_task_count"], 1)
+        self.assertEqual(payload["auto_merge_candidate_count"], 1)
+        self.assertEqual(payload["draft_only_task_count"], 0)
+        self.assertTrue(payload["task_level_auto_merge_allowed"])
+
+    def test_evaluate_changed_files_blocks_selector_paths(self) -> None:
+        allowed = evaluate_changed_files(["docs/operator_runbook.md"], repo_root=PROJECT_ROOT)
+        blocked = evaluate_changed_files(["src/ranking.py", "README.md"], repo_root=PROJECT_ROOT)
+
+        self.assertTrue(allowed["allowed"])
+        self.assertFalse(blocked["allowed"])
+        self.assertEqual(blocked["blocked_files"], ["src/ranking.py"])
+
+    def test_render_pr_body_contains_merge_policy_and_issue_reference(self) -> None:
         issue_context = {
             "number": 30,
             "title": "Monthly Optimization Tasks · Sandbox",
@@ -70,6 +100,7 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
         body = render_pr_body(payload)
 
         self.assertIn("<!-- auto-optimization-pr:issue-30 -->", body)
+        self.assertIn("Task-level auto-merge eligible: `yes`", body)
         self.assertIn("Add a short README note", body)
         self.assertIn("Refs #30", body)
 

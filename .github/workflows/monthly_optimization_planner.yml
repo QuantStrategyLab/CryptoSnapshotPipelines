@@ -212,64 +212,22 @@ jobs:
               print(f"issue_number={fanout.get('issue_number') or ''}", file=output)
           PY
 
-      - name: Trigger BinancePlatform experiment validation by label
+      - name: Best-effort label BinancePlatform issue for experiment validation
         if: steps.downstream_experiment_target.outputs.should_dispatch == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
           TARGET_REPO: ${{ inputs.downstream_repo }}
           ISSUE_NUMBER: ${{ steps.downstream_experiment_target.outputs.issue_number }}
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.error
-          import urllib.parse
-          import urllib.request
-
-          token = os.environ["GITHUB_TOKEN"]
-          repo = os.environ["TARGET_REPO"]
-          issue_number = os.environ["ISSUE_NUMBER"]
-          label_name = "experiment-validation"
-          api_base = f"https://api.github.com/repos/{repo}"
-          headers = {
-              "Authorization": f"Bearer {token}",
-              "Accept": "application/vnd.github+json",
-              "X-GitHub-Api-Version": "2022-11-28",
-              "User-Agent": "monthly-optimization-planner",
-          }
-
-          def request_json(method: str, url: str, payload: dict | None = None):
-              data = None
-              if payload is not None:
-                  data = json.dumps(payload).encode("utf-8")
-              request = urllib.request.Request(url, data=data, method=method, headers=headers)
-              with urllib.request.urlopen(request) as response:
-                  raw = response.read().decode("utf-8")
-              return json.loads(raw) if raw else {}
-
-          label_path = urllib.parse.quote(label_name, safe="")
-          try:
-              request_json("GET", f"{api_base}/labels/{label_path}")
-          except urllib.error.HTTPError as exc:
-              if exc.code != 404:
-                  raise
-              request_json(
-                  "POST",
-                  f"{api_base}/labels",
-                  {
-                      "name": label_name,
-                      "color": "1D76DB",
-                      "description": "Trigger experiment validation for monthly optimization tasks",
-                  },
-              )
-
-          issue = request_json("GET", f"{api_base}/issues/{issue_number}")
-          existing_labels = [label["name"] for label in issue.get("labels", [])]
-          if label_name in existing_labels:
-              request_json("DELETE", f"{api_base}/issues/{issue_number}/labels/{label_path}")
-          request_json("POST", f"{api_base}/issues/{issue_number}/labels", {"labels": [label_name]})
-          print(f"Toggled {label_name} on issue #{issue_number} in {repo}")
-          PY
+          set +e
+          gh label create experiment-validation             --repo "$TARGET_REPO"             --color 1D76DB             --description "Trigger experiment validation for monthly optimization tasks"             --force
+          label_status=$?
+          gh issue edit "$ISSUE_NUMBER"             --repo "$TARGET_REPO"             --add-label experiment-validation
+          issue_status=$?
+          set -e
+          if [ "$label_status" -ne 0 ] || [ "$issue_status" -ne 0 ]; then
+            echo "Downstream experiment-validation label update skipped for $TARGET_REPO#$ISSUE_NUMBER." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Dispatch BinancePlatform experiment validation
         if: steps.downstream_experiment_target.outputs.should_dispatch == 'true'
