@@ -12,7 +12,10 @@ name: Experiment Validation
 jobs:
   validate:
     if: contains(github.event.issue.labels.*.name, 'monthly-optimization-task') || inputs.issue_number != ''
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
     permissions:
       contents: read
       issues: write

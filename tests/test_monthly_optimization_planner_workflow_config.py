@@ -32,6 +32,8 @@ class MonthlyOptimizationPlannerWorkflowConfigTests(unittest.TestCase):
         self.assertIn("Resolve upstream experiment validation target", workflow)
         self.assertIn("Dispatch CryptoLeaderRotation experiment validation", workflow)
         self.assertIn("Resolve downstream experiment validation target", workflow)
+        self.assertIn("Trigger BinancePlatform experiment validation by label", workflow)
+        self.assertIn("experiment-validation", workflow)
         self.assertIn("Dispatch BinancePlatform experiment validation", workflow)
         self.assertIn("gh workflow run experiment_validation.yml", workflow)
         self.assertIn("--allow-permission-skip", workflow)
