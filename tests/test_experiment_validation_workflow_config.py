@@ -15,6 +15,7 @@ class ExperimentValidationWorkflowConfigTests(unittest.TestCase):
         self.assertIn("issues:", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("issue_number:", workflow)
+        self.assertIn("self-hosted", workflow)
         self.assertIn("prepare_experiment_validation.py", workflow)
         self.assertIn("download_history.py", workflow)
         self.assertIn("run_monthly_shadow_build.py", workflow)
