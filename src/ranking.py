@@ -9,6 +9,25 @@ from .regime import get_regime_weights
 from .utils import normalize_component_by_date
 
 
+def sort_ranking_snapshot(snapshot: pd.DataFrame) -> pd.DataFrame:
+    """Apply a deterministic ranking order with explicit tie-breaks."""
+    ordered = snapshot.copy()
+    added_columns: list[str] = []
+    for column in ("confidence", "liquidity_stability", "avg_quote_vol_180"):
+        if column not in ordered.columns:
+            ordered[column] = np.nan
+            added_columns.append(column)
+
+    ordered["_sort_symbol"] = pd.Index(ordered.index).astype(str).str.upper()
+    ordered = ordered.sort_values(
+        ["final_score", "confidence", "liquidity_stability", "avg_quote_vol_180", "_sort_symbol"],
+        ascending=[False, False, False, False, True],
+        na_position="last",
+        kind="mergesort",
+    )
+    return ordered.drop(columns=["_sort_symbol", *added_columns], errors="ignore")
+
+
 def merge_predictions(panel: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
     """Attach model prediction columns to the main panel."""
     if predictions.empty:
@@ -68,9 +87,9 @@ def build_final_scores(panel: pd.DataFrame, config: dict[str, Any]) -> pd.DataFr
         eligible = group.loc[group["in_universe"] & group["final_score"].notna()].copy()
         if eligible.empty:
             continue
-        ranks = eligible["final_score"].rank(ascending=False, method="first")
-        panel.loc[ranks.index, "current_rank"] = ranks
-        selected = eligible["final_score"].nlargest(pool_size)
+        ordered = sort_ranking_snapshot(eligible)
+        panel.loc[ordered.index, "current_rank"] = np.arange(1, len(ordered) + 1, dtype=float)
+        selected = ordered.head(pool_size)
         panel.loc[selected.index, "selected_flag"] = True
 
     if "prediction_window_count" in panel.columns:
@@ -87,5 +106,5 @@ def latest_ranking_snapshot(panel: pd.DataFrame, as_of_date: pd.Timestamp | str)
     """Return one date slice sorted by the current final score."""
     snapshot = panel.xs(pd.Timestamp(as_of_date), level="date").copy()
     if "final_score" in snapshot.columns:
-        snapshot = snapshot.sort_values("final_score", ascending=False)
+        snapshot = sort_ranking_snapshot(snapshot)
     return snapshot

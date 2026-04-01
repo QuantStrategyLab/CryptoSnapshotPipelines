@@ -52,8 +52,12 @@ jobs:
       - name: Download Or Update Raw History
         run: python scripts/download_history.py --top-liquid "${DOWNLOAD_TOP_LIQUID}" --force-exchange-info
 
-      - name: Build Production v1 Live Pool
-        run: python scripts/build_live_pool.py --universe-mode "${PUBLISH_MODE}"
+      - name: Build Production v1 Live Pool And Shadow Tracks
+        run: |
+          python scripts/run_monthly_shadow_build.py \
+            --universe-mode "${PUBLISH_MODE}" \
+            --shadow-universe-mode "${PUBLISH_MODE}" \
+            --skip-publish-dry-run
 
       - name: Publish Production v1 Release
         run: python scripts/publish_release.py --mode "${PUBLISH_MODE}"
