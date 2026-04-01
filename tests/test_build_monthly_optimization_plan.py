@@ -52,6 +52,54 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
         self.assertEqual(len(plan["safe_auto_pr_candidates"]), 2)
         self.assertEqual(len(plan["experiment_candidates"]), 1)
 
+    def test_build_plan_reassigns_reporting_tasks_and_downgrades_manual_checks(self) -> None:
+        upstream_review = {
+            "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+            "review_kind": "upstream_selector",
+            "source_issue": {"number": 11, "title": "Monthly Report Review: 2026-04-01", "url": "https://github.com/a/b/issues/11"},
+            "risk_level": "low",
+            "production_recommendation": "keep_production_as_is",
+            "summary": "Upstream is stable.",
+            "recommended_actions": [],
+        }
+        downstream_review = {
+            "source_repo": "QuantStrategyLab/BinancePlatform",
+            "review_kind": "execution_runtime",
+            "source_issue": {"number": 9, "title": "Monthly Execution Review: 2026-03", "url": "https://github.com/a/b/issues/9"},
+            "risk_level": "medium",
+            "production_recommendation": "needs_attention",
+            "summary": "Execution needs follow-up.",
+            "recommended_actions": [
+                {
+                    "owner_repo": "CryptoStrategies",
+                    "title": "Add monthly report cash-flow attribution",
+                    "risk_level": "low",
+                    "auto_pr_safe": True,
+                    "experiment_only": False,
+                    "summary": "Extend the monthly report to show deposits, withdrawals, realized PnL, and unrealized PnL separately.",
+                },
+                {
+                    "owner_repo": "BinancePlatform",
+                    "title": "Check DCA and rotation eligibility gates against current free USDT",
+                    "risk_level": "low",
+                    "auto_pr_safe": True,
+                    "experiment_only": False,
+                    "summary": "Verify minimum order size, reserve floor, and available balance thresholds.",
+                },
+            ],
+        }
+
+        plan = build_plan(upstream_review, downstream_review)
+
+        bp_actions = plan["repo_action_summary"]["BinancePlatform"]["actions"]
+        self.assertEqual([action["title"] for action in bp_actions], [
+            "Check DCA and rotation eligibility gates against current free USDT",
+            "Add monthly report cash-flow attribution",
+        ])
+        self.assertEqual(bp_actions[0]["auto_pr_safe"], False)
+        self.assertEqual(bp_actions[1]["auto_pr_safe"], True)
+        self.assertEqual(len(plan["safe_auto_pr_candidates"]), 1)
+
     def test_render_summary_markdown_mentions_source_reviews_and_repos(self) -> None:
         plan = {
             "highest_review_risk": "medium",

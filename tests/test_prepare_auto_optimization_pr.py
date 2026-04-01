@@ -21,8 +21,8 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
 - [ ] `low` Restore monthly shadow/challenger build generation before review [auto-pr-safe]
   - Summary: Ensure `official_baseline` and `challenger_topk_60` are produced each month.
   - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
-- [ ] `low` Document deterministic tie-break behavior for equal-score boundary cases [auto-pr-safe]
-  - Summary: Add explicit documentation or report wording describing how equal scores are ordered and selected.
+- [ ] `low` Document and verify tie-breaking for equal scores [auto-pr-safe]
+  - Summary: Confirm the secondary sort used for equal scores is deterministic, stable, and documented.
   - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
 - [ ] `low` Add a boundary tracker [auto-pr-safe, experiment-only]
   - Summary: Track near-cutoff symbols monthly.
@@ -49,7 +49,7 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
             [action["title"] for action in payload["skipped_actions"]],
             [
                 "Restore monthly shadow/challenger build generation before review",
-                "Document deterministic tie-break behavior for equal-score boundary cases",
+                "Document and verify tie-breaking for equal scores",
             ],
         )
 

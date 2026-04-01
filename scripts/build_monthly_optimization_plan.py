@@ -11,6 +11,85 @@ from typing import Any
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 SCHEMA_VERSION = "2026-04-02"
 REPO_ORDER = ["CryptoLeaderRotation", "CryptoStrategies", "BinancePlatform"]
+MANUAL_REVIEW_PREFIXES = (
+    "check ",
+    "review ",
+    "audit ",
+    "reconcile ",
+    "assess ",
+    "confirm ",
+    "determine ",
+    "verify ",
+)
+
+
+def _combined_action_text(action: dict[str, Any]) -> str:
+    return f"{action.get('title', '')} {action.get('summary', '')}".lower()
+
+
+def _resolve_owner_repo(source_review: dict[str, Any], action: dict[str, Any]) -> str:
+    text = _combined_action_text(action)
+
+    if any(
+        marker in text
+        for marker in (
+            "monthly report",
+            "cash-flow",
+            "cash flow",
+            "withdrawal",
+            "deposit",
+            "realized pnl",
+            "unrealized pnl",
+            "open positions",
+            "no-trade",
+            "gating",
+            "free usdt",
+            "dca",
+            "rotation",
+        )
+    ):
+        return "BinancePlatform"
+
+    if any(
+        marker in text
+        for marker in (
+            "shadow build",
+            "challenger",
+            "tie-break",
+            "tie break",
+            "equal scores",
+            "boundary",
+            "near-cutoff",
+            "near-cutoff",
+            "selection threshold",
+        )
+    ):
+        return "CryptoLeaderRotation"
+
+    return action["owner_repo"]
+
+
+def _resolve_auto_pr_safe(source_review: dict[str, Any], action: dict[str, Any]) -> bool:
+    title = str(action.get("title", "")).strip().lower()
+    summary = str(action.get("summary", "")).strip().lower()
+    if not bool(action.get("auto_pr_safe")):
+        return False
+
+    if title.startswith(MANUAL_REVIEW_PREFIXES):
+        return False
+    if any(
+        phrase in summary
+        for phrase in (
+            "assess whether",
+            "confirm whether",
+            "determine whether",
+            "verify minimum order size",
+            "review logs",
+            "pull binance transaction history",
+        )
+    ):
+        return False
+    return True
 
 
 def highest_risk(actions: list[dict[str, Any]]) -> str:
@@ -31,16 +110,18 @@ def sort_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def normalize_action(source_review: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
+    owner_repo = _resolve_owner_repo(source_review, action)
+    auto_pr_safe = _resolve_auto_pr_safe(source_review, action)
     return {
         "source_repo": source_review["source_repo"],
         "source_issue_number": source_review["source_issue"]["number"],
         "source_issue_title": source_review["source_issue"]["title"],
         "source_issue_url": source_review["source_issue"]["url"],
         "source_review_kind": source_review["review_kind"],
-        "owner_repo": action["owner_repo"],
+        "owner_repo": owner_repo,
         "title": action["title"],
         "risk_level": action["risk_level"],
-        "auto_pr_safe": bool(action.get("auto_pr_safe")),
+        "auto_pr_safe": auto_pr_safe,
         "experiment_only": bool(action.get("experiment_only")),
         "summary": action["summary"],
     }
