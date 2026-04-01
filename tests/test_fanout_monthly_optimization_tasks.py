@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from scripts.fanout_monthly_optimization_tasks import build_issue_body, build_issue_title, build_marker
+from scripts.fanout_monthly_optimization_tasks import (
+    build_closed_issue_body,
+    build_issue_body,
+    build_issue_title,
+    build_marker,
+)
 
 
 class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
@@ -72,6 +77,17 @@ class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
         self.assertIn("Reconcile March cash flows", body)
         self.assertIn("Add zero-trade diagnostics [auto-pr-safe]", body)
         self.assertIn("Source: [QuantStrategyLab/BinancePlatform #9]", body)
+
+    def test_build_closed_issue_body_marks_repo_as_resolved(self) -> None:
+        body = build_closed_issue_body(
+            self.plan,
+            "CryptoStrategies",
+            planner_issue_url="https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/20",
+        )
+
+        self.assertIn("<!-- monthly-optimization-task:CryptoStrategies:", body)
+        self.assertIn("No repo-scoped tasks remain", body)
+        self.assertIn("This issue is being closed", body)
 
 
 if __name__ == "__main__":

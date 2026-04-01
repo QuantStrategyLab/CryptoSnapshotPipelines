@@ -80,6 +80,19 @@ def build_issue_body(plan: dict[str, Any], owner_repo: str, planner_issue_url: s
     return "\n".join(lines).strip() + "\n"
 
 
+def build_closed_issue_body(plan: dict[str, Any], owner_repo: str, planner_issue_url: str | None = None) -> str:
+    lines = [
+        build_marker(plan, owner_repo),
+        f"# Monthly Optimization Tasks · {owner_repo}",
+        "",
+        "No repo-scoped tasks remain in the current monthly optimization plan.",
+        "This issue is being closed to avoid leaving stale automation targets behind.",
+    ]
+    if planner_issue_url:
+        lines.extend(["", f"- Planner issue: {planner_issue_url}"])
+    return "\n".join(lines).strip() + "\n"
+
+
 def github_request(method: str, url: str, token: str, payload: dict[str, Any] | None = None) -> Any:
     data = None
     headers = {
@@ -119,19 +132,44 @@ def ensure_label(api_url: str, repo: str, token: str) -> None:
 
 
 def upsert_issue(*, api_url: str, repo: str, token: str, title: str, body: str) -> tuple[str, int, str]:
-    issues = github_request(
-        "GET",
-        f"{api_url}/repos/{repo}/issues?state=open&labels={urllib.parse.quote(LABEL_NAME)}&per_page=100",
-        token,
-    )
     marker = build_marker_from_body(body)
-    existing = next((issue for issue in issues if build_marker_from_body(issue.get("body", "")) == marker), None)
+    existing = find_existing_issue(api_url=api_url, repo=repo, token=token, marker=marker)
     payload = {"title": title, "body": body, "labels": [LABEL_NAME]}
     if existing:
         github_request("PATCH", f"{api_url}/repos/{repo}/issues/{existing['number']}", token, payload)
         return "updated", int(existing["number"]), str(existing["html_url"])
     created = github_request("POST", f"{api_url}/repos/{repo}/issues", token, payload)
     return "created", int(created["number"]), str(created["html_url"])
+
+
+def find_existing_issue(*, api_url: str, repo: str, token: str, marker: str) -> dict[str, Any] | None:
+    issues = github_request(
+        "GET",
+        f"{api_url}/repos/{repo}/issues?state=open&labels={urllib.parse.quote(LABEL_NAME)}&per_page=100",
+        token,
+    )
+    return next((issue for issue in issues if build_marker_from_body(issue.get("body", "")) == marker), None)
+
+
+def close_existing_issue(
+    *,
+    api_url: str,
+    repo: str,
+    token: str,
+    title: str,
+    body: str,
+) -> tuple[bool, int | None, str | None]:
+    marker = build_marker_from_body(body)
+    existing = find_existing_issue(api_url=api_url, repo=repo, token=token, marker=marker)
+    if not existing:
+        return False, None, None
+    github_request(
+        "PATCH",
+        f"{api_url}/repos/{repo}/issues/{existing['number']}",
+        token,
+        {"title": title, "body": body, "state": "closed", "labels": [LABEL_NAME]},
+    )
+    return True, int(existing["number"]), str(existing["html_url"])
 
 
 def build_result(
@@ -186,13 +224,40 @@ def main() -> int:
     plan = json.loads(args.plan_file.read_text(encoding="utf-8"))
     actions = _repo_actions(plan, args.owner_repo)
     if not actions:
-        result = build_result(
-            owner_repo=args.owner_repo,
-            target_repo=args.repo,
-            plan=plan,
-            status="skipped_no_actions",
-            reason="No recommended actions for this repo in the current optimization plan.",
-        )
+        title = build_issue_title(plan, args.owner_repo)
+        body = build_closed_issue_body(plan, args.owner_repo, planner_issue_url=args.planner_issue_url)
+        try:
+            closed, issue_number, issue_url = close_existing_issue(
+                api_url=args.api_url.rstrip("/"),
+                repo=args.repo,
+                token=token,
+                title=title,
+                body=body,
+            )
+            result = build_result(
+                owner_repo=args.owner_repo,
+                target_repo=args.repo,
+                plan=plan,
+                status="closed_no_actions" if closed else "skipped_no_actions",
+                issue_number=issue_number,
+                issue_url=issue_url,
+                reason=None if closed else "No recommended actions for this repo in the current optimization plan.",
+            )
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            if args.allow_permission_skip and exc.code in {403, 404}:
+                result = build_result(
+                    owner_repo=args.owner_repo,
+                    target_repo=args.repo,
+                    plan=plan,
+                    status="skipped_permission",
+                    reason=f"{exc.code}: {detail or 'permission denied or repo not accessible'}",
+                )
+                write_result(args.output_file, result)
+                print(json.dumps(result, ensure_ascii=False))
+                return 0
+            print(f"GitHub API request failed: {exc.code} {detail}", file=sys.stderr)
+            return 1
         write_result(args.output_file, result)
         print(json.dumps(result, ensure_ascii=False))
         return 0
