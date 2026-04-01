@@ -127,6 +127,20 @@ Use this file as the primary review input for the monthly upstream release packa
 - Pool size: {bundle['pool_size']}
 - Symbols: {", ".join(bundle['symbols']) or 'n/a'}
 
+## Review intent
+
+- This is an upstream selector review for CryptoLeaderRotation, not a downstream execution report.
+- The main question is whether the current monthly 5-symbol pool still looks like a sound production selector output, and what additional research evidence is still missing.
+- Shadow / challenger coverage should be used for strategy-optimization judgment when available. If missing, treat optimization evidence as incomplete rather than forcing a strong conclusion.
+- Downstream BinancePlatform consumes this pool monthly and then applies its own execution logic on top.
+
+## Strategy review questions
+
+1. Does the official pool look internally consistent with the ranking preview and release metadata?
+2. Are score spread and selected symbols reasonable for a Binance Spot mainstream leader selector?
+3. Is shadow / challenger evidence present, and if not, what is the highest-value missing comparison?
+4. What are the most useful next low-risk research directions before changing production selector logic?
+
 ## Release Status Summary
 
 {release_status_md}

@@ -57,6 +57,10 @@ class MonthlyReportBundleTests(unittest.TestCase):
             self.assertIn("monthly_telegram.txt", manifest["artifact_files"])
             self.assertTrue((bundle_dir / "ai_review_input.md").exists())
             self.assertTrue((bundle_dir / "job_summary.md").exists())
+            ai_review_input = (bundle_dir / "ai_review_input.md").read_text(encoding="utf-8")
+            self.assertIn("upstream selector review", ai_review_input)
+            self.assertIn("Shadow / challenger coverage", ai_review_input)
+            self.assertIn("Strategy review questions", ai_review_input)
 
 
 if __name__ == "__main__":
