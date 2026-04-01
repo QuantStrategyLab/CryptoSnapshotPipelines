@@ -1,24 +1,29 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.prepare_auto_optimization_pr import build_payload, parse_actions, render_pr_body
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrepareAutoOptimizationPrTests(unittest.TestCase):
     def setUp(self) -> None:
         self.issue_context = {
-            "number": 15,
-            "title": "Monthly Optimization Tasks · BinancePlatform: 2026-04-01 / 2026-03",
-            "body": """# Monthly Optimization Tasks · BinancePlatform
+            "number": 22,
+            "title": "Monthly Optimization Tasks · CryptoLeaderRotation: 2026-04-01 / 2026-03",
+            "body": """# Monthly Optimization Tasks · CryptoLeaderRotation
 
 ## Actions
-- [ ] `high` Reconcile March cash flows and open-position state
-  - Summary: Pull Binance transaction history for March.
-  - Source: [QuantStrategyLab/BinancePlatform #9](https://github.com/QuantStrategyLab/BinancePlatform/issues/9)
-- [ ] `low` Add zero-trade diagnostics to the report [auto-pr-safe]
-  - Summary: Include the top failed gating reason counts.
-  - Source: [QuantStrategyLab/BinancePlatform #9](https://github.com/QuantStrategyLab/BinancePlatform/issues/9)
+- [ ] `low` Restore monthly shadow/challenger build generation before review [auto-pr-safe]
+  - Summary: Ensure `official_baseline` and `challenger_topk_60` are produced each month.
+  - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
+- [ ] `low` Document deterministic tie-break behavior for equal-score boundary cases [auto-pr-safe]
+  - Summary: Add explicit documentation or report wording describing how equal scores are ordered and selected.
+  - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
 - [ ] `low` Add a boundary tracker [auto-pr-safe, experiment-only]
   - Summary: Track near-cutoff symbols monthly.
   - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
@@ -29,26 +34,44 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
         actions = parse_actions(self.issue_context["body"])
 
         self.assertEqual(len(actions), 3)
-        self.assertEqual(actions[0]["risk_level"], "high")
-        self.assertEqual(actions[1]["flags"], ["auto-pr-safe"])
+        self.assertEqual(actions[0]["risk_level"], "low")
+        self.assertEqual(actions[0]["flags"], ["auto-pr-safe"])
         self.assertEqual(actions[2]["flags"], ["auto-pr-safe", "experiment-only"])
         self.assertEqual(actions[2]["source_label"], "QuantStrategyLab/CryptoLeaderRotation #11")
 
-    def test_build_payload_selects_only_low_auto_pr_safe_actions(self) -> None:
-        payload = build_payload(self.issue_context)
+    def test_build_payload_skips_completed_clr_tasks_and_excludes_experiments(self) -> None:
+        payload = build_payload(self.issue_context, repo_root=PROJECT_ROOT)
 
-        self.assertTrue(payload["should_run"])
-        self.assertEqual(payload["safe_task_count"], 2)
-        self.assertEqual(payload["branch_name"], "automation/monthly-optimization-issue-15")
-        self.assertEqual(payload["safe_actions"][0]["title"], "Add zero-trade diagnostics to the report")
+        self.assertFalse(payload["should_run"])
+        self.assertEqual(payload["safe_task_count"], 0)
+        self.assertEqual(payload["skipped_task_count"], 2)
+        self.assertEqual(
+            [action["title"] for action in payload["skipped_actions"]],
+            [
+                "Restore monthly shadow/challenger build generation before review",
+                "Document deterministic tie-break behavior for equal-score boundary cases",
+            ],
+        )
 
     def test_render_pr_body_contains_marker_and_issue_reference(self) -> None:
-        payload = build_payload(self.issue_context)
+        issue_context = {
+            "number": 30,
+            "title": "Monthly Optimization Tasks · Sandbox",
+            "body": """# Monthly Optimization Tasks · Sandbox
+
+## Actions
+- [ ] `low` Add a short README note [auto-pr-safe]
+  - Summary: Document a small operator-facing behavior.
+  - Source: [Sandbox #1](https://example.com/issues/1)
+""",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = build_payload(issue_context, repo_root=Path(temp_dir))
         body = render_pr_body(payload)
 
-        self.assertIn("<!-- auto-optimization-pr:issue-15 -->", body)
-        self.assertIn("Add zero-trade diagnostics to the report", body)
-        self.assertIn("Refs #15", body)
+        self.assertIn("<!-- auto-optimization-pr:issue-30 -->", body)
+        self.assertIn("Add a short README note", body)
+        self.assertIn("Refs #30", body)
 
 
 if __name__ == "__main__":
