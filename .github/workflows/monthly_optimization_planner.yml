@@ -58,11 +58,31 @@ jobs:
             echo "downstream_dir=${DOWNSTREAM_DIR}"
           } >> "${GITHUB_OUTPUT}"
 
+      - name: Prepare upstream review payload
+        run: |
+          python3 scripts/build_ai_review_payload.py \
+            --source-repo "${GITHUB_REPOSITORY}" \
+            --review-kind upstream_selector \
+            --issue-context-file "${{ steps.artifact_paths.outputs.upstream_dir }}/issue_context.json" \
+            --secondary-review-file "${{ steps.artifact_paths.outputs.upstream_dir }}/secondary_review.json" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${{ inputs.upstream_run_id }}" \
+            --output-file data/output/prepared/upstream_review_payload.json
+
+      - name: Prepare downstream review payload
+        run: |
+          python3 scripts/build_ai_review_payload.py \
+            --source-repo "${{ inputs.downstream_repo }}" \
+            --review-kind execution_runtime \
+            --issue-context-file "${{ steps.artifact_paths.outputs.downstream_dir }}/issue_context.json" \
+            --secondary-review-file "${{ steps.artifact_paths.outputs.downstream_dir }}/secondary_review.json" \
+            --run-url "${GITHUB_SERVER_URL}/${{ inputs.downstream_repo }}/actions/runs/${{ inputs.downstream_run_id }}" \
+            --output-file data/output/prepared/downstream_review_payload.json
+
       - name: Build monthly optimization plan
         run: |
           python3 scripts/build_monthly_optimization_plan.py \
-            --upstream-review-file "${{ steps.artifact_paths.outputs.upstream_dir }}/final_review_payload.json" \
-            --downstream-review-file "${{ steps.artifact_paths.outputs.downstream_dir }}/final_review_payload.json" \
+            --upstream-review-file data/output/prepared/upstream_review_payload.json \
+            --downstream-review-file data/output/prepared/downstream_review_payload.json \
             --output-dir data/output/monthly_optimization
 
       - name: Append optimization summary
