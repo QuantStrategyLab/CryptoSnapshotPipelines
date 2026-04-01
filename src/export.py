@@ -4,6 +4,7 @@ from typing import Any
 
 import pandas as pd
 
+from .ranking import sort_ranking_snapshot
 from .utils import date_to_str, write_json
 
 
@@ -20,6 +21,7 @@ def export_latest_ranking(panel: pd.DataFrame, output_dir: str | Any, as_of_date
     """Export the latest ranking cross section to CSV."""
     snapshot = panel.xs(as_of_date, level="date").copy()
     snapshot = snapshot.loc[snapshot["in_universe"] | snapshot["selected_flag"]].copy()
+    snapshot = sort_ranking_snapshot(snapshot)
     snapshot["as_of_date"] = date_to_str(as_of_date)
     snapshot["symbol"] = snapshot.index
     columns = [
@@ -34,7 +36,7 @@ def export_latest_ranking(panel: pd.DataFrame, output_dir: str | Any, as_of_date
         "selected_flag",
         "current_rank",
     ]
-    exported = snapshot[columns].sort_values("final_score", ascending=False).reset_index(drop=True)
+    exported = snapshot[columns].reset_index(drop=True)
     exported.to_csv(output_dir / "latest_ranking.csv", index=False)
     return exported
 
@@ -62,7 +64,7 @@ def build_live_pool_payload(
     selection_meta_fields: list[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Build additive live-pool payloads without performing I/O."""
-    selected = ranking_snapshot.sort_values("final_score", ascending=False).head(pool_size).copy()
+    selected = sort_ranking_snapshot(ranking_snapshot).head(pool_size).copy()
     symbols = selected.index.tolist()
     metadata_indexed = metadata.set_index("symbol")
     as_of_date_str = date_to_str(as_of_date)

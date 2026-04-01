@@ -427,6 +427,8 @@ The monthly operator workflow is now:
 2. run the baseline publish dry-run check
 3. refresh the dual-track shadow candidate histories
 
+The GitHub monthly publish workflow now runs this shadow-build wrapper before the real publish step, so the monthly report and AI review always receive same-cycle `official_baseline` and `challenger_topk_60` coverage.
+
 Canonical command:
 
 ```bash
@@ -462,6 +464,14 @@ Track identity fields to rely on:
 - `expected_pool_size`
 
 Baseline remains the official production reference. `challenger_topk_60` remains shadow-only.
+
+Monthly ranking tie-break rule for `core_major` live exports:
+
+1. `final_score` descending
+2. `confidence` descending
+3. `liquidity_stability` descending
+4. `avg_quote_vol_180` descending
+5. `symbol` ascending
 
 ## Monthly Build Telegram Notify
 
