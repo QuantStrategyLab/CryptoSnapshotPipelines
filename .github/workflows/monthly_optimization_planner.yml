@@ -1,0 +1,72 @@
+name: Monthly Optimization Planner
+
+"on":
+  workflow_dispatch:
+    inputs:
+      upstream_run_id:
+        description: "AI review run id from CryptoLeaderRotation"
+        required: true
+      downstream_run_id:
+        description: "AI review run id from BinancePlatform"
+        required: true
+      downstream_repo:
+        description: "Downstream execution repo"
+        required: true
+        default: "QuantStrategyLab/BinancePlatform"
+
+jobs:
+  planner:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download upstream AI review artifact
+        run: |
+          python3 scripts/download_ai_review_artifact.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --run-id "${{ inputs.upstream_run_id }}" \
+            --output-dir data/input/upstream \
+            --token-env GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download downstream AI review artifact
+        run: |
+          python3 scripts/download_ai_review_artifact.py \
+            --repo "${{ inputs.downstream_repo }}" \
+            --run-id "${{ inputs.downstream_run_id }}" \
+            --output-dir data/input/downstream \
+            --token-env CROSS_REPO_GITHUB_TOKEN
+        env:
+          CROSS_REPO_GITHUB_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+
+      - name: Build monthly optimization plan
+        run: |
+          python3 scripts/build_monthly_optimization_plan.py \
+            --upstream-review-file data/input/upstream/final_review_payload.json \
+            --downstream-review-file data/input/downstream/final_review_payload.json \
+            --output-dir data/output/monthly_optimization
+
+      - name: Append optimization summary
+        run: cat data/output/monthly_optimization/optimization_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload planner artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: monthly-optimization-plan-${{ inputs.upstream_run_id }}-${{ inputs.downstream_run_id }}
+          path: data/output/monthly_optimization/
+
+      - name: Create monthly optimization issue
+        run: |
+          python3 scripts/post_monthly_optimization_issue.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --plan-file data/output/monthly_optimization/optimization_plan.json \
+            --summary-file data/output/monthly_optimization/optimization_summary.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
