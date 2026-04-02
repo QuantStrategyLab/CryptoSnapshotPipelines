@@ -26,6 +26,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Create GitHub App token for cross-repo access
+        id: cross_repo_app_token
+        if: vars.CROSS_REPO_GITHUB_APP_ID != '' && secrets.CROSS_REPO_GITHUB_APP_PRIVATE_KEY != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CROSS_REPO_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            CryptoLeaderRotation
+            BinancePlatform
+            CryptoStrategies
+          permission-actions: write
+          permission-issues: write
+
+      - name: Resolve cross-repo access token
+        id: cross_repo_token
+        env:
+          APP_TOKEN: ${{ steps.cross_repo_app_token.outputs.token }}
+          FALLBACK_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+        run: |
+          if [ -n "$APP_TOKEN" ]; then
+            echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "source=github_app" >> "$GITHUB_OUTPUT"
+          elif [ -n "$FALLBACK_TOKEN" ]; then
+            echo "token=$FALLBACK_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "source=personal_access_token" >> "$GITHUB_OUTPUT"
+          else
+            echo "Missing cross-repo credentials. Configure GitHub App secrets or CROSS_REPO_GITHUB_TOKEN." >&2
+            exit 1
+          fi
+
       - name: Download upstream AI review artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +69,7 @@ jobs:
 
       - name: Download downstream AI review artifact
         env:
-          GH_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.cross_repo_token.outputs.token }}
         run: |
           mkdir -p data/input/downstream
           gh run download "${{ inputs.downstream_run_id }}" \
@@ -126,7 +158,7 @@ jobs:
             --output-file data/output/monthly_optimization/fanout/crypto_strategies.json \
             --allow-permission-skip
         env:
-          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.cross_repo_token.outputs.token }}
 
       - name: Fan out BinancePlatform task issue
         run: |
@@ -138,7 +170,7 @@ jobs:
             --output-file data/output/monthly_optimization/fanout/binance_platform.json \
             --allow-permission-skip
         env:
-          GITHUB_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.cross_repo_token.outputs.token }}
 
       - name: Append fanout summary
         run: |
@@ -215,7 +247,7 @@ jobs:
       - name: Best-effort label BinancePlatform issue for experiment validation
         if: steps.downstream_experiment_target.outputs.should_dispatch == 'true'
         env:
-          GH_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.cross_repo_token.outputs.token }}
           TARGET_REPO: ${{ inputs.downstream_repo }}
           ISSUE_NUMBER: ${{ steps.downstream_experiment_target.outputs.issue_number }}
         run: |
@@ -232,7 +264,7 @@ jobs:
       - name: Dispatch BinancePlatform experiment validation
         if: steps.downstream_experiment_target.outputs.should_dispatch == 'true'
         env:
-          GH_TOKEN: ${{ secrets.CROSS_REPO_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.cross_repo_token.outputs.token }}
         run: |
           set +e
           gh workflow run experiment_validation.yml \
@@ -241,7 +273,7 @@ jobs:
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
-            echo "Downstream experiment validation dispatch skipped: CROSS_REPO_GITHUB_TOKEN likely needs Actions write on ${{ inputs.downstream_repo }}." >> "$GITHUB_STEP_SUMMARY"
+            echo "Downstream experiment validation dispatch skipped: ${{ steps.cross_repo_token.outputs.source }} token likely needs Actions write on ${{ inputs.downstream_repo }}." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload planner artifact
