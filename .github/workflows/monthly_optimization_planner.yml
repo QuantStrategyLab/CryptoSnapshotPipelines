@@ -26,9 +26,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Detect GitHub App credentials
+        id: cross_repo_credentials
+        env:
+          APP_ID: ${{ vars.CROSS_REPO_GITHUB_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.CROSS_REPO_GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "has_app_credentials=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_app_credentials=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub App token for cross-repo access
         id: cross_repo_app_token
-        if: vars.CROSS_REPO_GITHUB_APP_ID != '' && secrets.CROSS_REPO_GITHUB_APP_PRIVATE_KEY != ''
+        if: steps.cross_repo_credentials.outputs.has_app_credentials == 'true'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.CROSS_REPO_GITHUB_APP_ID }}

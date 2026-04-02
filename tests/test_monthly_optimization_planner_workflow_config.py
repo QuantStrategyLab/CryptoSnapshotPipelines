@@ -20,6 +20,8 @@ class MonthlyOptimizationPlannerWorkflowConfigTests(unittest.TestCase):
         self.assertIn("CROSS_REPO_GITHUB_TOKEN", workflow)
         self.assertIn("CROSS_REPO_GITHUB_APP_PRIVATE_KEY", workflow)
         self.assertIn("CROSS_REPO_GITHUB_APP_ID", workflow)
+        self.assertIn("Detect GitHub App credentials", workflow)
+        self.assertIn("has_app_credentials", workflow)
         self.assertIn("actions/create-github-app-token@v2", workflow)
         self.assertIn("Resolve cross-repo access token", workflow)
         self.assertIn("source=github_app", workflow)
