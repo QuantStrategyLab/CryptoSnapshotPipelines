@@ -17,6 +17,8 @@ name: Monthly Optimization Planner
 jobs:
   planner:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     permissions:
       actions: write
       contents: read
