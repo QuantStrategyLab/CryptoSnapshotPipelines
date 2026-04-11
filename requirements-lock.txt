@@ -1,6 +1,6 @@
 pandas==2.3.3
 numpy==2.0.2
-requests==2.32.5
+requests==2.33.0
 matplotlib==3.9.4
 PyYAML==6.0.3
 lightgbm==4.6.0
