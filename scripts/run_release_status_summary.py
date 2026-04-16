@@ -85,6 +85,7 @@ def build_release_status_payload(
     universe = load_json(root / "latest_universe.json")
     live_pool = load_json(root / "live_pool.json")
     manifest = load_optional_json(root / "release_manifest.json") or {}
+    artifact_manifest = load_optional_json(root / "artifact_manifest.json") or {}
     ranking = pd.read_csv(root / "latest_ranking.csv")
 
     validation = validate_release_outputs(
@@ -94,6 +95,7 @@ def build_release_status_payload(
         expected_pool_size=live_pool.get("pool_size"),
         max_age_days=max_age_days,
         require_manifest=True,
+        require_artifact_manifest=True,
         require_freshness=require_freshness,
     )
 
@@ -134,6 +136,7 @@ def build_release_status_payload(
             "latest_universe_symbol_count": len(list(universe.get("symbols", []))),
             "latest_ranking_row_count": int(len(ranking)),
             "latest_ranking_selected_count": int(selected_mask.sum()) if not selected_mask.empty else 0,
+            "artifact_contract_version": str(artifact_manifest.get("contract_version", "")).strip(),
             "ranking_preview": ranking_preview_rows,
         },
         "publish_summary": {
@@ -147,6 +150,7 @@ def build_release_status_payload(
         "validation": {
             "ok": bool(validation.get("ok")),
             "manifest_present": bool(validation.get("manifest_present")),
+            "artifact_manifest_present": bool(validation.get("artifact_manifest_present")),
             "age_days": validation.get("age_days"),
             "errors": list(validation.get("errors", [])),
             "warnings": list(validation.get("warnings", [])),
@@ -156,6 +160,7 @@ def build_release_status_payload(
             "latest_ranking": str(root / "latest_ranking.csv"),
             "live_pool": str(root / "live_pool.json"),
             "release_manifest": str(root / "release_manifest.json"),
+            "artifact_manifest": str(root / "artifact_manifest.json"),
         },
     }
 
@@ -190,6 +195,7 @@ Generated: {payload['generated_at_utc']}
 - latest_universe symbol count: {artifact['latest_universe_symbol_count']}
 - latest_ranking row count: {artifact['latest_ranking_row_count']}
 - latest_ranking selected count: {artifact['latest_ranking_selected_count']}
+- artifact contract version: {artifact['artifact_contract_version'] or 'n/a'}
 
 ### Ranking preview
 
@@ -207,6 +213,7 @@ Generated: {payload['generated_at_utc']}
 
 - ok: {validation['ok']}
 - manifest_present: {validation['manifest_present']}
+- artifact_manifest_present: {validation['artifact_manifest_present']}
 - age_days: {validation['age_days']}
 
 ### Errors

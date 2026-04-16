@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ REQUIRED_OUTPUT_FILES = (
     "live_pool_legacy.json",
 )
 REQUIRED_MANIFEST_FILE = "release_manifest.json"
+REQUIRED_ARTIFACT_MANIFEST_FILE = "artifact_manifest.json"
 REQUIRED_RANKING_COLUMNS = (
     "as_of_date",
     "symbol",
@@ -36,6 +38,38 @@ REQUIRED_LIVE_POOL_FIELDS = (
     "symbol_map",
     "source_project",
 )
+REQUIRED_ARTIFACT_MANIFEST_FIELDS = (
+    "manifest_type",
+    "contract_version",
+    "strategy_profile",
+    "artifact_type",
+    "artifact_name",
+    "as_of_date",
+    "snapshot_as_of",
+    "version",
+    "mode",
+    "symbol_count",
+    "symbols",
+    "source_project",
+    "generated_at",
+    "primary_artifact",
+    "artifacts",
+)
+REQUIRED_ARTIFACT_MANIFEST_ARTIFACTS = {
+    "latest_universe": "latest_universe.json",
+    "latest_ranking": "latest_ranking.csv",
+    "live_pool": "live_pool.json",
+    "live_pool_legacy": "live_pool_legacy.json",
+}
+EXPECTED_ARTIFACT_CONTRACT_VERSION = "crypto_leader_rotation.live_pool.v1"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def build_release_version(as_of_date: str, mode: str) -> str:
@@ -149,6 +183,7 @@ def validate_release_outputs(
     reference_date: Any = None,
     max_age_days: int | None = None,
     require_manifest: bool = False,
+    require_artifact_manifest: bool = False,
     require_freshness: bool = False,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
@@ -170,6 +205,13 @@ def validate_release_outputs(
     elif manifest_present:
         loaded_files[REQUIRED_MANIFEST_FILE] = manifest_path
 
+    artifact_manifest_path = output_path / REQUIRED_ARTIFACT_MANIFEST_FILE
+    artifact_manifest_present = artifact_manifest_path.exists()
+    if require_artifact_manifest and not artifact_manifest_present:
+        errors.append(f"missing required output: {artifact_manifest_path}")
+    elif artifact_manifest_present:
+        loaded_files[REQUIRED_ARTIFACT_MANIFEST_FILE] = artifact_manifest_path
+
     if errors:
         return {
             "ok": False,
@@ -177,12 +219,14 @@ def validate_release_outputs(
             "warnings": warnings,
             "output_dir": str(output_path),
             "manifest_present": manifest_present,
+            "artifact_manifest_present": artifact_manifest_present,
         }
 
     latest_universe = read_json(loaded_files["latest_universe.json"], default={}) or {}
     live_pool = read_json(loaded_files["live_pool.json"], default={}) or {}
     live_pool_legacy = read_json(loaded_files["live_pool_legacy.json"], default={}) or {}
     manifest = read_json(manifest_path, default={}) or {}
+    artifact_manifest = read_json(artifact_manifest_path, default={}) or {}
 
     ranking_path = loaded_files["latest_ranking.csv"]
     try:
@@ -203,6 +247,9 @@ def validate_release_outputs(
     if manifest_present and not isinstance(manifest, dict):
         errors.append("release_manifest.json must contain an object")
         manifest = {}
+    if artifact_manifest_present and not isinstance(artifact_manifest, dict):
+        errors.append("artifact_manifest.json must contain an object")
+        artifact_manifest = {}
 
     _append_missing_fields(live_pool, REQUIRED_LIVE_POOL_FIELDS, errors, "live_pool.json")
     _append_missing_fields(live_pool_legacy, REQUIRED_LIVE_POOL_FIELDS, errors, "live_pool_legacy.json")
@@ -305,6 +352,10 @@ def validate_release_outputs(
         manifest_as_of_date, _ = _parse_as_of_date(manifest.get("as_of_date"))
         if manifest_as_of_date:
             as_of_values.add(manifest_as_of_date)
+    if artifact_manifest_present:
+        artifact_manifest_as_of_date, _ = _parse_as_of_date(artifact_manifest.get("as_of_date"))
+        if artifact_manifest_as_of_date:
+            as_of_values.add(artifact_manifest_as_of_date)
     if len(as_of_values) > 1:
         errors.append(f"release outputs have inconsistent as_of_date values: {sorted(as_of_values)}")
 
@@ -399,10 +450,78 @@ def validate_release_outputs(
                     "release_manifest.json firestore.payload source_project does not match live_pool.json"
                 )
 
+    if artifact_manifest_present:
+        _append_missing_fields(
+            artifact_manifest,
+            REQUIRED_ARTIFACT_MANIFEST_FIELDS,
+            errors,
+            "artifact_manifest.json",
+        )
+        if str(artifact_manifest.get("manifest_type", "")).strip() != "strategy_artifact":
+            errors.append("artifact_manifest.json manifest_type must be strategy_artifact")
+        if str(artifact_manifest.get("contract_version", "")).strip() != EXPECTED_ARTIFACT_CONTRACT_VERSION:
+            errors.append(
+                f"artifact_manifest.json contract_version must be {EXPECTED_ARTIFACT_CONTRACT_VERSION}"
+            )
+        if str(artifact_manifest.get("strategy_profile", "")).strip() != "crypto_leader_rotation":
+            errors.append("artifact_manifest.json strategy_profile must be crypto_leader_rotation")
+        if str(artifact_manifest.get("artifact_type", "")).strip() != "live_pool":
+            errors.append("artifact_manifest.json artifact_type must be live_pool")
+        if str(artifact_manifest.get("primary_artifact", "")).strip() != "live_pool":
+            errors.append("artifact_manifest.json primary_artifact must be live_pool")
+        if str(artifact_manifest.get("version", "")).strip() != live_pool_version:
+            errors.append("artifact_manifest.json version does not match live_pool.json version")
+        if str(artifact_manifest.get("mode", "")).strip() != live_pool_mode:
+            errors.append("artifact_manifest.json mode does not match live_pool.json mode")
+        artifact_as_of_date, _ = _parse_as_of_date(artifact_manifest.get("as_of_date"))
+        if artifact_as_of_date and live_pool_as_of_date and artifact_as_of_date != live_pool_as_of_date:
+            errors.append("artifact_manifest.json as_of_date does not match live_pool.json as_of_date")
+        artifact_snapshot_as_of, _ = _parse_as_of_date(artifact_manifest.get("snapshot_as_of"))
+        if artifact_snapshot_as_of and live_pool_as_of_date and artifact_snapshot_as_of != live_pool_as_of_date:
+            errors.append("artifact_manifest.json snapshot_as_of does not match live_pool.json as_of_date")
+        if str(artifact_manifest.get("source_project", "")).strip() != live_pool_source_project:
+            errors.append("artifact_manifest.json source_project does not match live_pool.json")
+        artifact_symbols = artifact_manifest.get("symbols")
+        if artifact_symbols != live_pool_symbols:
+            errors.append("artifact_manifest.json symbols do not match live_pool.json symbols")
+        try:
+            artifact_symbol_count = int(artifact_manifest.get("symbol_count", -1))
+        except Exception:
+            artifact_symbol_count = -1
+        if artifact_symbol_count != len(live_pool_symbols):
+            errors.append("artifact_manifest.json symbol_count does not match live_pool.json")
+        artifacts = artifact_manifest.get("artifacts", {})
+        if not isinstance(artifacts, dict):
+            errors.append("artifact_manifest.json artifacts must be an object")
+            artifacts = {}
+        for artifact_name, expected_filename in REQUIRED_ARTIFACT_MANIFEST_ARTIFACTS.items():
+            artifact_entry = artifacts.get(artifact_name)
+            if not isinstance(artifact_entry, dict):
+                errors.append(f"artifact_manifest.json artifacts.{artifact_name} must be an object")
+                continue
+            artifact_path = str(artifact_entry.get("path", "")).strip()
+            if not artifact_path:
+                errors.append(f"artifact_manifest.json artifacts.{artifact_name}.path must be non-empty")
+                continue
+            if Path(artifact_path).name != expected_filename:
+                errors.append(
+                    f"artifact_manifest.json artifacts.{artifact_name}.path must point to {expected_filename}"
+                )
+                continue
+            resolved_path = output_path / artifact_path
+            if not resolved_path.exists():
+                errors.append(f"artifact_manifest.json artifacts.{artifact_name}.path does not exist: {artifact_path}")
+                continue
+            expected_sha = str(artifact_entry.get("sha256", "")).strip()
+            if not expected_sha:
+                errors.append(f"artifact_manifest.json artifacts.{artifact_name}.sha256 must be non-empty")
+            elif expected_sha != _sha256_file(resolved_path):
+                errors.append(f"artifact_manifest.json artifacts.{artifact_name}.sha256 does not match file content")
+
     age_days: int | None = None
     if live_pool_as_of_ts is not None:
         if reference_date is None:
-            reference_ts = pd.Timestamp.utcnow().normalize()
+            reference_ts = pd.Timestamp.now(tz="UTC").normalize()
         else:
             reference_ts = pd.Timestamp(reference_date).normalize()
         age_days = (reference_ts.date() - live_pool_as_of_ts.date()).days
@@ -424,6 +543,10 @@ def validate_release_outputs(
         "warnings": warnings,
         "output_dir": str(output_path),
         "manifest_present": manifest_present,
+        "artifact_manifest_present": artifact_manifest_present,
+        "artifact_contract_version": str(artifact_manifest.get("contract_version", "")).strip()
+        if artifact_manifest_present
+        else None,
         "as_of_date": live_pool_as_of_date,
         "version": live_pool_version,
         "mode": live_pool_mode,

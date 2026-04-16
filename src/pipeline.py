@@ -8,7 +8,12 @@ import pandas as pd
 from .backtest import run_backtest_suite, run_walkforward_scoring
 from .evaluation import evaluate_leader_selection, leader_metrics_to_frame
 from .external_data import load_optional_market_cap_metadata, merge_histories_with_external
-from .export import export_latest_ranking, export_latest_universe, export_live_pool
+from .export import (
+    export_latest_ranking,
+    export_latest_universe,
+    export_live_pool,
+    export_strategy_artifact_manifest,
+)
 from .features import MODEL_FEATURE_COLUMNS, add_market_context_features, build_feature_panel
 from .labels import build_labels
 from .models import fit_predict_models
@@ -386,6 +391,12 @@ def build_live_pool_outputs(
     export_latest_universe(panel, output_dir, latest_date)
     export_latest_ranking(panel, output_dir, latest_date)
     latest_snapshot = latest_ranking_snapshot(panel, latest_date)
+    source_project = str(
+        config.get("publish", {}).get(
+            "source_project",
+            config.get("project", {}).get("name", "crypto-leader-rotation"),
+        )
+    )
     live_payload = export_live_pool(
         ranking_snapshot=latest_snapshot.loc[latest_snapshot["selected_flag"] | latest_snapshot["in_universe"]],
         metadata=metadata,
@@ -393,7 +404,7 @@ def build_live_pool_outputs(
         as_of_date=latest_date,
         pool_size=int(config["export"]["live_pool_size"]),
         mode=str(resolved_mode),
-        source_project=str(config.get("publish", {}).get("source_project", config.get("project", {}).get("name", "crypto-leader-rotation"))),
+        source_project=source_project,
         selection_meta_fields=(
             list(config["export"].get("selection_meta_fields", []))
             if config["export"].get("include_selection_meta", False)
@@ -401,12 +412,18 @@ def build_live_pool_outputs(
         ),
         save_legacy=bool(config["export"]["save_legacy_live_pool"]),
     )
+    artifact_manifest = export_strategy_artifact_manifest(
+        output_dir=output_dir,
+        live_pool=live_payload,
+        source_project=source_project,
+    )
     logger.info("Live pool exports saved into %s for %s.", output_dir, latest_date.date())
 
     return {
         "panel": panel,
         "metadata": metadata,
         "live_payload": live_payload,
+        "artifact_manifest": artifact_manifest,
         "as_of_date": latest_date,
         "train_start_date": train_start_date,
         "train_end_date": train_end_date,

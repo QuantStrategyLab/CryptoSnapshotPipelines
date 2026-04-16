@@ -10,6 +10,7 @@ Primary production outputs:
 - `data/output/latest_ranking.csv`
 - `data/output/live_pool.json`
 - `data/output/live_pool_legacy.json`
+- `data/output/artifact_manifest.json`
 - `data/output/release_manifest.json`
 - `data/output/release_status_summary.json`
 - `data/output/release_status_summary.md`
@@ -86,7 +87,7 @@ Boundary rules:
 3. Run explicit contract validation:
 
 ```bash
-.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-manifest --require-artifact-manifest
 ```
 
 4. Run publish preflight without external writes:
@@ -125,7 +126,7 @@ Boundary rules:
 
 - `requirements-lock.txt` is present and matches the intended release dependency set.
 - Local artifacts are non-empty and pass `scripts/validate_release_contract.py`.
-- `live_pool.json`, `live_pool_legacy.json`, and `release_manifest.json` agree on `as_of_date`, `version`, `mode`, `pool_size`, and `source_project`.
+- `live_pool.json`, `live_pool_legacy.json`, and `release_manifest.json` agree on `as_of_date`, `version`, `mode`, `pool_size`, and `source_project`; `artifact_manifest.json` agrees on `as_of_date`, `version`, `mode`, `source_project`, and `symbol_count`.
 - `GCP_PROJECT_ID`, `GCS_BUCKET`, `FIRESTORE_COLLECTION`, and `FIRESTORE_DOCUMENT` are set correctly for real publish.
 - Historical backfills use `--allow-stale` explicitly; do not silently publish stale artifacts.
 
@@ -141,7 +142,7 @@ Symptoms:
 Actions:
 
 - Re-run `scripts/build_live_pool.py`
-- Inspect `data/output/latest_universe.json`, `live_pool.json`, `live_pool_legacy.json`, and `latest_ranking.csv`
+- Inspect `data/output/latest_universe.json`, `latest_ranking.csv`, `live_pool.json`, `live_pool_legacy.json`, and `artifact_manifest.json`
 - Confirm `pool_size`, `symbols`, `symbol_map`, `version`, and `source_project` are present and aligned
 
 ### Stale artifacts
@@ -192,17 +193,18 @@ Use rollback only when the newest publish is clearly bad or malformed.
 - GCS `crypto-leader-rotation/releases/<version>/`
 - the last good `data/output/release_manifest.json`
 
-2. Restore the four canonical artifacts from that version into `data/output/`:
+2. Restore the five canonical artifacts from that version into `data/output/`:
 
 - `latest_universe.json`
 - `latest_ranking.csv`
 - `live_pool.json`
 - `live_pool_legacy.json`
+- `artifact_manifest.json`
 
 3. Validate the restored payload locally:
 
 ```bash
-.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-artifact-manifest
 ```
 
 4. Regenerate the manifest and verify publish preflight:

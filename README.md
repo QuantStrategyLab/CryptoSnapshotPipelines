@@ -12,8 +12,9 @@ Core upstream artifacts:
 2. `data/output/latest_ranking.csv`
 3. `data/output/live_pool.json`
 4. `data/output/live_pool_legacy.json`
-5. `data/output/release_manifest.json`
-6. `data/output/release_status_summary.json`
+5. `data/output/artifact_manifest.json`
+6. `data/output/release_manifest.json`
+7. `data/output/release_status_summary.json`
 
 ## Upstream Boundary
 
@@ -28,7 +29,7 @@ Core upstream artifacts:
 
 In practice, that means:
 
-- upstream publishes and explains `latest_universe`, `latest_ranking`, `live_pool`, `release_manifest`, and release-status summaries
+- upstream publishes and explains `latest_universe`, `latest_ranking`, `live_pool`, `artifact_manifest`, `release_manifest`, and release-status summaries
 - downstream consumes the official live-pool contract plus publish metadata and emits only runtime/execution status
 - research CSVs, shadow-track diagnostics, and monthly review outputs stay upstream and are not part of the minimum downstream execution contract
 
@@ -40,7 +41,7 @@ The repository is now intentionally split into two tracks:
   - data source: `Binance Spot only`
   - universe mode: `core_major`
   - publish cadence: `monthly`
-  - default outputs: `latest_universe.json`, `latest_ranking.csv`, `live_pool.json`, `live_pool_legacy.json`
+  - default outputs: `latest_universe.json`, `latest_ranking.csv`, `live_pool.json`, `live_pool_legacy.json`, `artifact_manifest.json`
 - `Experimental external-data track`
   - used for research, comparison, and validation only
   - not enabled by default
@@ -245,10 +246,10 @@ Validate the local production artifacts before publish or rollback:
 .venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5
 ```
 
-Require a generated manifest as part of the check:
+Require generated release and artifact manifests as part of the production check:
 
 ```bash
-.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-manifest
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-manifest --require-artifact-manifest
 ```
 
 Operator workflow details, rollback steps, and research-vs-production boundaries are documented in `docs/operator_runbook.md`.
@@ -370,7 +371,7 @@ Downstream consumers should rely on these core fields in `data/output/live_pool.
 - `symbol_map`
 - `source_project`
 
-Publish-time pointer fields such as `storage_prefix`, `current_prefix`, `live_pool_uri`, `live_pool_legacy_uri`, `latest_universe_uri`, and `latest_ranking_uri` are stable when present in the published Firestore payload, but they are release/distribution metadata rather than research features.
+Publish-time pointer fields such as `storage_prefix`, `current_prefix`, `live_pool_uri`, `live_pool_legacy_uri`, `artifact_manifest_uri`, `latest_universe_uri`, and `latest_ranking_uri` are stable when present in the published Firestore payload, but they are release/distribution metadata rather than research features.
 
 Optional additive research extensions:
 

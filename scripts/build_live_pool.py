@@ -62,13 +62,15 @@ def main() -> None:
         ),
         expected_pool_size=int(config["export"]["live_pool_size"]),
         max_age_days=args.contract_max_age_days,
+        require_artifact_manifest=True,
         require_freshness=not bool(args.as_of_date or args.allow_stale),
     )
     logger.info(
-        "Release contract validated | version=%s | pool_size=%s | manifest_present=%s",
+        "Release contract validated | version=%s | pool_size=%s | release_manifest_present=%s | artifact_manifest_present=%s",
         validation["version"],
         validation["pool_size"],
         validation["manifest_present"],
+        validation["artifact_manifest_present"],
     )
     logger.info("Export payload:\n%s", result["live_payload"])
 

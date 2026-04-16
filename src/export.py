@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from .ranking import sort_ranking_snapshot
 from .utils import date_to_str, write_json
+
+
+DEFAULT_STRATEGY_PROFILE = "crypto_leader_rotation"
+DEFAULT_ARTIFACT_TYPE = "live_pool"
+DEFAULT_ARTIFACT_CONTRACT_VERSION = "crypto_leader_rotation.live_pool.v1"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def export_latest_universe(panel: pd.DataFrame, output_dir: str | Any, as_of_date: pd.Timestamp) -> dict[str, Any]:
@@ -141,3 +156,90 @@ def export_live_pool(
     if save_legacy:
         write_json(output_dir / "live_pool_legacy.json", legacy_payload)
     return payload
+
+
+def build_strategy_artifact_manifest(
+    *,
+    output_dir: str | Any,
+    live_pool: dict[str, Any],
+    strategy_profile: str = DEFAULT_STRATEGY_PROFILE,
+    artifact_type: str = DEFAULT_ARTIFACT_TYPE,
+    contract_version: str = DEFAULT_ARTIFACT_CONTRACT_VERSION,
+    source_project: str = "crypto-leader-rotation",
+    generated_at: Any | None = None,
+) -> dict[str, Any]:
+    """Build the profile-aware artifact manifest consumed by downstream runtimes."""
+    output_path = Path(output_dir)
+    generated_at_value = generated_at if generated_at is not None else pd.Timestamp.now(tz="UTC")
+    generated_at_text = (
+        generated_at_value.isoformat()
+        if hasattr(generated_at_value, "isoformat")
+        else str(generated_at_value)
+    )
+
+    artifact_files = {
+        "live_pool": "live_pool.json",
+        "live_pool_legacy": "live_pool_legacy.json",
+        "latest_ranking": "latest_ranking.csv",
+        "latest_universe": "latest_universe.json",
+    }
+    artifacts = {}
+    for artifact_name, filename in artifact_files.items():
+        path = output_path / filename
+        if not path.exists():
+            continue
+        artifacts[artifact_name] = {
+            "path": filename,
+            "sha256": _sha256_file(path),
+        }
+
+    symbols = live_pool.get("symbols", ())
+    if isinstance(symbols, dict):
+        symbols = tuple(symbols)
+    elif isinstance(symbols, list):
+        symbols = tuple(str(symbol) for symbol in symbols)
+    else:
+        symbols = ()
+
+    as_of_date = str(live_pool.get("as_of_date", "")).strip()
+    mode = str(live_pool.get("mode", "")).strip()
+    version = str(live_pool.get("version", "")).strip()
+    source_project_text = str(live_pool.get("source_project") or source_project)
+    return {
+        "manifest_type": "strategy_artifact",
+        "contract_version": str(contract_version),
+        "strategy_profile": str(strategy_profile),
+        "artifact_type": str(artifact_type),
+        "artifact_name": f"{strategy_profile}_{artifact_type}",
+        "as_of_date": as_of_date,
+        "snapshot_as_of": as_of_date,
+        "version": version,
+        "mode": mode,
+        "symbol_count": len(symbols),
+        "symbols": list(symbols),
+        "source_project": source_project_text,
+        "generated_at": generated_at_text,
+        "primary_artifact": "live_pool",
+        "artifacts": artifacts,
+    }
+
+
+def export_strategy_artifact_manifest(
+    *,
+    output_dir: str | Any,
+    live_pool: dict[str, Any],
+    strategy_profile: str = DEFAULT_STRATEGY_PROFILE,
+    artifact_type: str = DEFAULT_ARTIFACT_TYPE,
+    contract_version: str = DEFAULT_ARTIFACT_CONTRACT_VERSION,
+    source_project: str = "crypto-leader-rotation",
+) -> dict[str, Any]:
+    manifest = build_strategy_artifact_manifest(
+        output_dir=output_dir,
+        live_pool=live_pool,
+        strategy_profile=strategy_profile,
+        artifact_type=artifact_type,
+        contract_version=contract_version,
+        source_project=source_project,
+    )
+    write_json(Path(output_dir) / "artifact_manifest.json", manifest)
+    return manifest

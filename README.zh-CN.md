@@ -9,6 +9,10 @@
 1. `data/output/latest_universe.json`
 2. `data/output/latest_ranking.csv`
 3. `data/output/live_pool.json`
+4. `data/output/live_pool_legacy.json`
+5. `data/output/artifact_manifest.json`
+6. `data/output/release_manifest.json`
+7. `data/output/release_status_summary.json`
 
 ## 当前状态
 
@@ -18,7 +22,7 @@
   - 数据源：仅 `Binance Spot`
   - universe mode：`core_major`
   - 发布频率：`monthly`
-  - 默认输出：`latest_universe.json`、`latest_ranking.csv`、`live_pool.json`、`live_pool_legacy.json`
+  - 默认输出：`latest_universe.json`、`latest_ranking.csv`、`live_pool.json`、`live_pool_legacy.json`、`artifact_manifest.json`
 - `Experimental external-data track`
   - 仅用于研究、比较和验证
   - 默认不启用
@@ -147,6 +151,20 @@ pip install -r requirements.txt
 - 输出设置
 - GCS / Firestore 发布设置
 
+## 发布契约检查
+
+发布或回滚前，先校验本地生产产物：
+
+```bash
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5
+```
+
+生产发布链应同时要求 release manifest 和 profile-aware artifact manifest：
+
+```bash
+.venv/bin/python scripts/validate_release_contract.py --mode core_major --expected-pool-size 5 --require-manifest --require-artifact-manifest
+```
+
 ## 最小可运行流程
 
 1. 下载历史数据
@@ -215,12 +233,15 @@ pip install -r requirements.txt
 - `data/output/live_pool_legacy.json`
 - Firestore summary document
 
+`data/output/artifact_manifest.json` 是 profile-aware wrapper，负责声明 artifact contract version、主 artifact、相关文件路径和校验和；它不是 `live_pool.json` 的字段复制。
+
 一些发布期辅助字段，例如：
 
 - `storage_prefix`
 - `current_prefix`
 - `live_pool_uri`
 - `live_pool_legacy_uri`
+- `artifact_manifest_uri`
 - `latest_universe_uri`
 - `latest_ranking_uri`
 
@@ -290,6 +311,7 @@ make monthly-shadow-build
 - official baseline
   - `data/output/live_pool.json`
   - `data/output/live_pool_legacy.json`
+  - `data/output/artifact_manifest.json`
   - `data/output/release_manifest.json`
 - shadow candidate tracks
   - `data/output/shadow_candidate_tracks/track_summary.csv`
@@ -322,6 +344,7 @@ make monthly-build-telegram
 
 - 只发送简短的 monthly build/publish health summary
 - 使用已有的 `monthly_shadow_build_summary.json`、`live_pool.json`、`release_manifest.json`、`track_summary.csv`
+- 生产发布链还会检查 `artifact_manifest.json`，但 Telegram 文本只展示摘要状态
 - 如果 Telegram 凭证缺失，会跳过而不是报错中断
 - 不改变 monthly build 行为，也不是 review 包生成器
 

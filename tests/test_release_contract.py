@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -13,6 +14,14 @@ from src.release_contract import validate_release_outputs
 
 def write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class ReleaseContractValidationTests(unittest.TestCase):
@@ -76,6 +85,44 @@ class ReleaseContractValidationTests(unittest.TestCase):
             ]
         ).to_csv(output_dir / "latest_ranking.csv", index=False)
 
+        write_json(
+            output_dir / "artifact_manifest.json",
+            {
+                "manifest_type": "strategy_artifact",
+                "contract_version": "crypto_leader_rotation.live_pool.v1",
+                "strategy_profile": "crypto_leader_rotation",
+                "artifact_type": "live_pool",
+                "artifact_name": "crypto_leader_rotation_live_pool",
+                "as_of_date": as_of_date,
+                "snapshot_as_of": as_of_date,
+                "version": version,
+                "mode": mode,
+                "symbol_count": len(symbols),
+                "symbols": symbols,
+                "source_project": source_project,
+                "generated_at": "2026-03-13T00:00:00+00:00",
+                "primary_artifact": "live_pool",
+                "artifacts": {
+                    "latest_universe": {
+                        "path": "latest_universe.json",
+                        "sha256": sha256_file(output_dir / "latest_universe.json"),
+                    },
+                    "latest_ranking": {
+                        "path": "latest_ranking.csv",
+                        "sha256": sha256_file(output_dir / "latest_ranking.csv"),
+                    },
+                    "live_pool": {
+                        "path": "live_pool.json",
+                        "sha256": sha256_file(output_dir / "live_pool.json"),
+                    },
+                    "live_pool_legacy": {
+                        "path": "live_pool_legacy.json",
+                        "sha256": sha256_file(output_dir / "live_pool_legacy.json"),
+                    },
+                },
+            },
+        )
+
         if include_manifest:
             write_json(
                 output_dir / "release_manifest.json",
@@ -117,13 +164,41 @@ class ReleaseContractValidationTests(unittest.TestCase):
                 reference_date="2026-03-14",
                 max_age_days=45,
                 require_manifest=True,
+                require_artifact_manifest=True,
                 require_freshness=True,
             )
 
         self.assertTrue(validation["ok"])
+        self.assertTrue(validation["artifact_manifest_present"])
+        self.assertEqual(validation["artifact_contract_version"], "crypto_leader_rotation.live_pool.v1")
         self.assertEqual(validation["version"], "2026-03-13-core_major")
         self.assertEqual(validation["pool_size"], 5)
         self.assertEqual(validation["age_days"], 1)
+
+    def test_validate_release_outputs_rejects_mismatched_artifact_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            self.build_outputs(root)
+            manifest_path = root / "data" / "output" / "artifact_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["contract_version"] = "crypto_leader_rotation.live_pool.v0"
+            manifest["artifacts"]["live_pool"]["sha256"] = "wrong"
+            write_json(manifest_path, manifest)
+
+            validation = validate_release_outputs(
+                root / "data" / "output",
+                require_artifact_manifest=True,
+            )
+
+        self.assertFalse(validation["ok"])
+        self.assertIn(
+            "artifact_manifest.json contract_version must be crypto_leader_rotation.live_pool.v1",
+            validation["errors"],
+        )
+        self.assertIn(
+            "artifact_manifest.json artifacts.live_pool.sha256 does not match file content",
+            validation["errors"],
+        )
 
     def test_validate_release_outputs_rejects_mismatched_manifest_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

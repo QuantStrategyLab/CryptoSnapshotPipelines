@@ -16,6 +16,7 @@ REQUIRED_OUTPUT_FILES = (
     "latest_ranking.csv",
     "live_pool.json",
     "live_pool_legacy.json",
+    "artifact_manifest.json",
 )
 
 
@@ -42,10 +43,12 @@ class ReleaseArtifacts:
     latest_ranking_path: Path
     live_pool_path: Path
     live_pool_legacy_path: Path
+    artifact_manifest_path: Path
     latest_universe: dict[str, Any]
     latest_ranking: pd.DataFrame
     live_pool: dict[str, Any]
     live_pool_legacy: dict[str, Any]
+    artifact_manifest: dict[str, Any]
 
 
 def parse_bool(value: Any, default: bool = False) -> bool:
@@ -119,6 +122,7 @@ def load_release_artifacts(output_dir: Path | str, mode: str) -> ReleaseArtifact
     latest_universe = read_json(paths["latest_universe.json"])
     live_pool = read_json(paths["live_pool.json"])
     live_pool_legacy = read_json(paths["live_pool_legacy.json"])
+    artifact_manifest = read_json(paths["artifact_manifest.json"])
     latest_ranking = pd.read_csv(paths["latest_ranking.csv"])
 
     as_of_values = {
@@ -147,10 +151,12 @@ def load_release_artifacts(output_dir: Path | str, mode: str) -> ReleaseArtifact
         latest_ranking_path=paths["latest_ranking.csv"],
         live_pool_path=paths["live_pool.json"],
         live_pool_legacy_path=paths["live_pool_legacy.json"],
+        artifact_manifest_path=paths["artifact_manifest.json"],
         latest_universe=latest_universe,
         latest_ranking=latest_ranking,
         live_pool=live_pool,
         live_pool_legacy=live_pool_legacy,
+        artifact_manifest=artifact_manifest,
     )
 
 
@@ -171,6 +177,7 @@ def ensure_publish_preflight(
         reference_date=reference_date,
         max_age_days=max_age_days,
         require_manifest=False,
+        require_artifact_manifest=True,
         require_freshness=require_freshness,
     )
     if settings.dry_run:
@@ -199,6 +206,7 @@ def build_storage_layout(settings: PublishSettings, artifacts: ReleaseArtifacts)
         "latest_ranking.csv": artifacts.latest_ranking_path,
         "live_pool.json": artifacts.live_pool_path,
         "live_pool_legacy.json": artifacts.live_pool_legacy_path,
+        "artifact_manifest.json": artifacts.artifact_manifest_path,
     }
 
     objects: dict[str, dict[str, str]] = {}
@@ -243,6 +251,9 @@ def build_firestore_payload(
         "latest_universe_uri": storage_layout["objects"]["latest_universe.json"]["current_uri"],
         "latest_ranking_uri": storage_layout["objects"]["latest_ranking.csv"]["current_uri"],
         "versioned_live_pool_legacy_uri": storage_layout["objects"]["live_pool_legacy.json"]["release_uri"],
+        "artifact_manifest_uri": storage_layout["objects"]["artifact_manifest.json"]["current_uri"],
+        "versioned_artifact_manifest_uri": storage_layout["objects"]["artifact_manifest.json"]["release_uri"],
+        "artifact_contract_version": str(artifacts.artifact_manifest.get("contract_version", "")),
         "generated_at": generated_at,
         "source_project": settings.source_project,
     }
@@ -267,6 +278,7 @@ def build_release_manifest(
             "latest_ranking": storage_layout["objects"]["latest_ranking.csv"],
             "live_pool": storage_layout["objects"]["live_pool.json"],
             "live_pool_legacy": storage_layout["objects"]["live_pool_legacy.json"],
+            "artifact_manifest": storage_layout["objects"]["artifact_manifest.json"],
         },
         "firestore": {
             "collection": settings.firestore_collection,
@@ -306,6 +318,7 @@ def upload_release_artifacts(
         "latest_ranking.csv": artifacts.latest_ranking_path,
         "live_pool.json": artifacts.live_pool_path,
         "live_pool_legacy.json": artifacts.live_pool_legacy_path,
+        "artifact_manifest.json": artifacts.artifact_manifest_path,
     }
     for filename, local_path in files.items():
         object_info = storage_layout["objects"][filename]
@@ -371,6 +384,7 @@ def run_release_publish(
         expected_pool_size=int(config["export"]["live_pool_size"]),
         max_age_days=max_age_days,
         require_manifest=True,
+        require_artifact_manifest=True,
         require_freshness=require_freshness,
     )
 

@@ -38,6 +38,11 @@ def parse_args() -> argparse.Namespace:
         help="Require release_manifest.json and validate it against the live pool contract.",
     )
     parser.add_argument(
+        "--require-artifact-manifest",
+        action="store_true",
+        help="Require artifact_manifest.json and validate the profile-aware artifact contract.",
+    )
+    parser.add_argument(
         "--reference-date",
         default=None,
         help="Optional reference date for freshness checks, in YYYY-MM-DD format.",
@@ -55,6 +60,7 @@ def main() -> None:
         reference_date=args.reference_date,
         max_age_days=args.max_age_days,
         require_manifest=args.require_manifest,
+        require_artifact_manifest=args.require_artifact_manifest,
         require_freshness=not args.allow_stale,
     )
     print(json.dumps(validation, ensure_ascii=False, indent=2))

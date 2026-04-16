@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.release_contract import validate_release_outputs
+from src.export import export_strategy_artifact_manifest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +62,7 @@ class BuildLivePoolSmokeTests(unittest.TestCase):
                 for fixture_file in FIXTURE_ROOT.iterdir():
                     shutil.copy2(fixture_file, output_path / fixture_file.name)
                 live_payload = json.loads((output_path / "live_pool.json").read_text(encoding="utf-8"))
+                export_strategy_artifact_manifest(output_dir=output_path, live_pool=live_payload)
                 return {
                     "as_of_date": MODULE.pd.Timestamp("2026-03-13"),
                     "train_start_date": MODULE.pd.Timestamp("2024-01-01"),
@@ -90,10 +92,12 @@ class BuildLivePoolSmokeTests(unittest.TestCase):
                 expected_mode="core_major",
                 expected_source_project="crypto-leader-rotation",
                 expected_pool_size=5,
+                require_artifact_manifest=True,
                 require_freshness=False,
             )
 
         self.assertTrue(validation["ok"])
+        self.assertTrue(validation["artifact_manifest_present"])
         self.assertEqual(validation["version"], "2026-03-13-core_major")
         self.assertEqual(validation["pool_size"], 5)
 

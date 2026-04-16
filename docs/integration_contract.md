@@ -10,6 +10,41 @@ The upstream project publishes a monthly `core_major` live pool and exposes it t
 
 ## Canonical Downstream Files
 
+### `artifact_manifest.json`
+
+This profile-aware manifest is the canonical contract wrapper for downstream
+runtimes. It lets the execution platform validate the artifact family without
+binding to `CryptoLeaderRotation` internals.
+
+Required stable fields:
+
+- `manifest_type = strategy_artifact`
+- `contract_version = crypto_leader_rotation.live_pool.v1`
+- `strategy_profile = crypto_leader_rotation`
+- `artifact_type = live_pool`
+- `artifact_name = crypto_leader_rotation_live_pool`
+- `as_of_date`
+- `snapshot_as_of`
+- `version`
+- `mode`
+- `symbol_count`
+- `symbols`
+- `source_project`
+- `generated_at`
+- `primary_artifact = live_pool`
+- `artifacts`
+
+The `artifacts` mapping includes relative file paths and SHA-256 checksums for:
+
+- `latest_universe`
+- `latest_ranking`
+- `live_pool`
+- `live_pool_legacy`
+
+Downstream platforms should treat this manifest as the strategy artifact
+contract and keep legacy `live_pool_legacy.json` parsing as a compatibility
+path, not as the only contract shape.
+
 ### `live_pool_legacy.json`
 
 This is the most convenient file for older downstream scripts that expect a direct symbol mapping.
@@ -123,9 +158,12 @@ Payload example:
   "current_prefix": "gs://example-bucket/crypto-leader-rotation/current",
   "live_pool_legacy_uri": "gs://example-bucket/crypto-leader-rotation/current/live_pool_legacy.json",
   "live_pool_uri": "gs://example-bucket/crypto-leader-rotation/current/live_pool.json",
+  "artifact_manifest_uri": "gs://example-bucket/crypto-leader-rotation/current/artifact_manifest.json",
   "latest_universe_uri": "gs://example-bucket/crypto-leader-rotation/current/latest_universe.json",
   "latest_ranking_uri": "gs://example-bucket/crypto-leader-rotation/current/latest_ranking.csv",
   "versioned_live_pool_legacy_uri": "gs://example-bucket/crypto-leader-rotation/releases/2026-03-13-core_major/live_pool_legacy.json",
+  "versioned_artifact_manifest_uri": "gs://example-bucket/crypto-leader-rotation/releases/2026-03-13-core_major/artifact_manifest.json",
+  "artifact_contract_version": "crypto_leader_rotation.live_pool.v1",
   "generated_at": "2026-03-13T13:00:00+00:00",
   "source_project": "crypto-leader-rotation"
 }
@@ -136,8 +174,9 @@ The Firestore document intentionally excludes the full ranking CSV. Downstream r
 Stable vs additive fields:
 
 - stable core fields: `as_of_date`, `version`, `mode`, `pool_size`, `symbols`, `symbol_map`, `source_project`
-- publish-only pointer fields: `storage_prefix`, `current_prefix`, `live_pool_uri`, `live_pool_legacy_uri`, `latest_universe_uri`, `latest_ranking_uri`, `versioned_live_pool_legacy_uri`
+- publish-only pointer fields: `storage_prefix`, `current_prefix`, `live_pool_uri`, `live_pool_legacy_uri`, `artifact_manifest_uri`, `latest_universe_uri`, `latest_ranking_uri`, `versioned_live_pool_legacy_uri`, `versioned_artifact_manifest_uri`
 - additive observability field: `generated_at`
+- artifact wrapper field: `artifact_contract_version`
 
 ## GCS Path Layout
 
@@ -148,6 +187,7 @@ gs://<bucket>/crypto-leader-rotation/releases/<YYYY-MM-DD-mode>/latest_universe.
 gs://<bucket>/crypto-leader-rotation/releases/<YYYY-MM-DD-mode>/latest_ranking.csv
 gs://<bucket>/crypto-leader-rotation/releases/<YYYY-MM-DD-mode>/live_pool.json
 gs://<bucket>/crypto-leader-rotation/releases/<YYYY-MM-DD-mode>/live_pool_legacy.json
+gs://<bucket>/crypto-leader-rotation/releases/<YYYY-MM-DD-mode>/artifact_manifest.json
 ```
 
 Current pointers:
@@ -157,6 +197,7 @@ gs://<bucket>/crypto-leader-rotation/current/latest_universe.json
 gs://<bucket>/crypto-leader-rotation/current/latest_ranking.csv
 gs://<bucket>/crypto-leader-rotation/current/live_pool.json
 gs://<bucket>/crypto-leader-rotation/current/live_pool_legacy.json
+gs://<bucket>/crypto-leader-rotation/current/artifact_manifest.json
 ```
 
 ## Local Shadow Release History

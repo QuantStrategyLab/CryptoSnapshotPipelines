@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import tempfile
@@ -21,8 +22,22 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class ReleaseStatusSummaryTests(unittest.TestCase):
-    def write_outputs(self, root: Path, *, include_manifest: bool = True) -> Path:
+    def write_outputs(
+        self,
+        root: Path,
+        *,
+        include_manifest: bool = True,
+        include_artifact_manifest: bool = True,
+    ) -> Path:
         output_dir = root / "data" / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
         symbols = ["TRXUSDT", "ETHUSDT", "BCHUSDT", "NEARUSDT", "SOLUSDT"]
@@ -72,6 +87,45 @@ class ReleaseStatusSummaryTests(unittest.TestCase):
             ]
         ).to_csv(output_dir / "latest_ranking.csv", index=False)
 
+        if include_artifact_manifest:
+            write_json(
+                output_dir / "artifact_manifest.json",
+                {
+                    "manifest_type": "strategy_artifact",
+                    "contract_version": "crypto_leader_rotation.live_pool.v1",
+                    "strategy_profile": "crypto_leader_rotation",
+                    "artifact_type": "live_pool",
+                    "artifact_name": "crypto_leader_rotation_live_pool",
+                    "as_of_date": "2026-03-13",
+                    "snapshot_as_of": "2026-03-13",
+                    "version": version,
+                    "mode": "core_major",
+                    "symbol_count": len(symbols),
+                    "symbols": symbols,
+                    "source_project": "crypto-leader-rotation",
+                    "generated_at": "2026-03-13T00:00:00+00:00",
+                    "primary_artifact": "live_pool",
+                    "artifacts": {
+                        "latest_universe": {
+                            "path": "latest_universe.json",
+                            "sha256": sha256_file(output_dir / "latest_universe.json"),
+                        },
+                        "latest_ranking": {
+                            "path": "latest_ranking.csv",
+                            "sha256": sha256_file(output_dir / "latest_ranking.csv"),
+                        },
+                        "live_pool": {
+                            "path": "live_pool.json",
+                            "sha256": sha256_file(output_dir / "live_pool.json"),
+                        },
+                        "live_pool_legacy": {
+                            "path": "live_pool_legacy.json",
+                            "sha256": sha256_file(output_dir / "live_pool_legacy.json"),
+                        },
+                    },
+                },
+            )
+
         if include_manifest:
             write_json(
                 output_dir / "release_manifest.json",
@@ -117,6 +171,7 @@ class ReleaseStatusSummaryTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["official_release"]["version"], "2026-03-13-core_major")
         self.assertEqual(payload["artifact_summary"]["latest_universe_symbol_count"], 6)
+        self.assertEqual(payload["artifact_summary"]["artifact_contract_version"], "crypto_leader_rotation.live_pool.v1")
         self.assertEqual(len(payload["artifact_summary"]["ranking_preview"]), 3)
         self.assertTrue(payload["validation"]["ok"])
 
@@ -134,6 +189,19 @@ class ReleaseStatusSummaryTests(unittest.TestCase):
         self.assertFalse(payload["validation"]["ok"])
         self.assertTrue(any("release_manifest.json" in item for item in payload["validation"]["errors"]))
         self.assertIn("## Validation", markdown)
+
+    def test_build_release_status_payload_reports_error_when_artifact_manifest_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = self.write_outputs(Path(tmp_dir), include_artifact_manifest=False)
+            payload = MODULE.build_release_status_payload(
+                output_dir,
+                max_age_days=45,
+                require_freshness=False,
+            )
+
+        self.assertEqual(payload["status"], "error")
+        self.assertFalse(payload["validation"]["artifact_manifest_present"])
+        self.assertTrue(any("artifact_manifest.json" in item for item in payload["validation"]["errors"]))
 
 
 if __name__ == "__main__":

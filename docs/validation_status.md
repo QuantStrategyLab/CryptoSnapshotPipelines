@@ -15,6 +15,7 @@ The repository is now frozen around this production default:
   - `latest_ranking.csv`
   - `live_pool.json`
   - `live_pool_legacy.json`
+  - `artifact_manifest.json`
 
 This is the only path that should be treated as the formal production baseline.
 
@@ -125,6 +126,7 @@ Validated in-repo:
 
 - `scripts/build_live_pool.py` produces the default `Production v1` live output
 - `scripts/publish_release.py --dry-run` builds a correct production release manifest
+- `scripts/validate_release_contract.py --require-artifact-manifest` validates the profile-aware artifact contract
 - `scripts/write_release_heartbeat.py` writes a small logs-branch heartbeat file
 - GitHub Actions workflow YAML parses correctly
 - release versioning, GCS object keys, and Firestore payload layout are consistent
@@ -136,6 +138,7 @@ Validated artifacts:
 - `data/output/latest_ranking.csv`
 - `data/output/live_pool.json`
 - `data/output/live_pool_legacy.json`
+- `data/output/artifact_manifest.json`
 - `data/output/release_manifest.json`
 - `data/output/heartbeat/monthly/<version>.json`
 
