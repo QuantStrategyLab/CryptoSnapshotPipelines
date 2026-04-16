@@ -88,7 +88,7 @@
 ## 仓库结构
 
 ```text
-crypto-leader-rotation/
+CryptoSnapshotPipelines/
   .github/
     workflows/
       monthly_publish.yml

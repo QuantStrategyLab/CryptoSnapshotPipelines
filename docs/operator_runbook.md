@@ -2,7 +2,7 @@
 
 ## Scope
 
-This runbook covers the production release path for `crypto-leader-rotation`.
+This runbook covers the production release path for `CryptoSnapshotPipelines`.
 
 Primary production outputs:
 
@@ -26,6 +26,10 @@ Primary publish targets:
 - GCS current pointers under `crypto-leader-rotation/current`
 - GCS versioned release objects under `crypto-leader-rotation/releases/<version>`
 - Firestore `strategy/CRYPTO_LEADER_ROTATION_LIVE_POOL`
+
+The GCS prefix, Firestore document, and `source_project` value intentionally
+remain in the `crypto-leader-rotation` v1 artifact namespace for downstream
+compatibility.
 
 ## Research Path Vs Production Path
 

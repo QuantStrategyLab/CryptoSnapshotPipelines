@@ -112,7 +112,7 @@ No market cap, on-chain, funding, sentiment, or third-party datasets are used ye
 ## Repository Structure
 
 ```text
-crypto-leader-rotation/
+CryptoSnapshotPipelines/
   .github/
     workflows/
       monthly_publish.yml
