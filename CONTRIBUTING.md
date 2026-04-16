@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to `CryptoLeaderRotation`.
+Thanks for contributing to `CryptoSnapshotPipelines`.
 
 ## Ground Rules
 

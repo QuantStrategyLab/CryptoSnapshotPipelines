@@ -1,6 +1,6 @@
 # Security Policy
 
-Thanks for helping keep `CryptoLeaderRotation` safe.
+Thanks for helping keep `CryptoSnapshotPipelines` safe.
 
 This repository is part of a research and release pipeline. Please do **not** open a public issue for vulnerabilities involving credentials, broker access, cloud resources, order execution, or secret material.
 

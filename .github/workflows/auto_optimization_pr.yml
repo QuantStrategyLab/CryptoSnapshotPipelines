@@ -138,7 +138,7 @@ jobs:
             Do not create a pull request yourself. The workflow will handle git, PR creation, CI dispatch, and post-CI merge.
             Only implement the low-risk tasks explicitly marked `[auto-pr-safe]`.
             Ignore any medium-risk or high-risk tasks.
-            You are working inside CryptoLeaderRotation, the upstream selector repository.
+            You are working inside CryptoSnapshotPipelines, the upstream selector repository.
             Prefer minimal changes in documentation, report wording, validation, shadow/challenger plumbing, instrumentation, and tests.
             Do not change production selector logic or ranking behavior from this issue alone.
             If an eligible task is marked `experiment-only`, keep the change non-production.

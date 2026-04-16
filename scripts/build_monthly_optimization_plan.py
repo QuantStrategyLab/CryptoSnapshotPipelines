@@ -10,7 +10,7 @@ from typing import Any
 
 RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 SCHEMA_VERSION = "2026-04-02"
-REPO_ORDER = ["CryptoLeaderRotation", "CryptoStrategies", "BinancePlatform"]
+REPO_ORDER = ["CryptoSnapshotPipelines", "CryptoStrategies", "BinancePlatform"]
 MANUAL_REVIEW_PREFIXES = (
     "check ",
     "review ",
@@ -64,7 +64,7 @@ def _resolve_owner_repo(source_review: dict[str, Any], action: dict[str, Any]) -
             "selection threshold",
         )
     ):
-        return "CryptoLeaderRotation"
+        return "CryptoSnapshotPipelines"
 
     return action["owner_repo"]
 

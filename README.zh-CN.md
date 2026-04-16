@@ -1,8 +1,8 @@
-# crypto-leader-rotation
+# CryptoSnapshotPipelines
 
 语言: [English](README.md) | 简体中文
 
-`crypto-leader-rotation` 是一个“研究 + 生产发布”结合的 Python 项目，它的职责不是交易，而是为下游执行脚本提供更稳定、更高质量的 Binance Spot 主流币候选池和 leader 排名结果。
+`CryptoSnapshotPipelines` 是加密货币策略的上游研究、特征快照和发布流水线仓库。当前生产 artifact family 仍然是 `crypto_leader_rotation` 这条 Binance Spot leader universe。
 
 这个仓库**不下单**、**不包含 live 执行逻辑**。它的核心交付物是一个可稳定发布的上游选择器，默认输出：
 
@@ -29,6 +29,8 @@
   - 不属于生产发布默认路径
 
 当前默认生产路径已经冻结在 `Production v1`。外部数据分支仍保留在仓库中，但在它没证明自己长期稳定优于 Binance-only 之前，它都只是实验路线。
+
+为了保持下游兼容，v1 artifact namespace 仍保留为 `crypto-leader-rotation`，live profile 仍保留为 `crypto_leader_rotation`。
 
 ## 这个项目为什么存在
 

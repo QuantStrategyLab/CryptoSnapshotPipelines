@@ -8,7 +8,7 @@ from scripts.build_ai_review_payload import SCHEMA_VERSION, build_review_payload
 class BuildAiReviewPayloadTests(unittest.TestCase):
     def test_build_review_payload_carries_standardized_root_fields(self) -> None:
         payload = build_review_payload(
-            source_repo="QuantStrategyLab/CryptoLeaderRotation",
+            source_repo="QuantStrategyLab/CryptoSnapshotPipelines",
             review_kind="upstream_selector",
             issue_context={"number": 11, "title": "Monthly Report Review: 2026-04-01"},
             secondary_review={
@@ -28,7 +28,7 @@ class BuildAiReviewPayloadTests(unittest.TestCase):
 
         self.assertEqual(payload["schema_version"], SCHEMA_VERSION)
         self.assertEqual(payload["repo_role"], "upstream_selector_review")
-        self.assertEqual(payload["source_issue"]["url"], "https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11")
+        self.assertEqual(payload["source_issue"]["url"], "https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/11")
         self.assertEqual(payload["secondary_reviewer"]["model"], "gpt-5.4-mini")
 
 

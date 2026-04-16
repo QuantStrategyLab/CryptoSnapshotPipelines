@@ -14,7 +14,7 @@ class RunOpenAiSecondaryReviewTests(unittest.TestCase):
     def test_build_system_prompt_for_upstream_selector_mentions_shadow_and_binanceplatform(self) -> None:
         prompt = build_system_prompt("upstream_selector")
 
-        self.assertIn("CryptoLeaderRotation", prompt)
+        self.assertIn("CryptoSnapshotPipelines", prompt)
         self.assertIn("shadow/challenger", prompt)
         self.assertIn("BinancePlatform", prompt)
 

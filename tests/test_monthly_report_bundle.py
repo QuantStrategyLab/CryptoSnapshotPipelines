@@ -42,7 +42,7 @@ class MonthlyReportBundleTests(unittest.TestCase):
         )
         (output_dir / "monthly_review.md").write_text("# Monthly Review\n", encoding="utf-8")
         (output_dir / "monthly_review_prompt.md").write_text("Monthly release review prompt\n", encoding="utf-8")
-        (output_dir / "monthly_telegram.txt").write_text("CryptoLeaderRotation monthly release\n", encoding="utf-8")
+        (output_dir / "monthly_telegram.txt").write_text("CryptoSnapshotPipelines monthly release\n", encoding="utf-8")
         return output_dir
 
     def test_write_bundle_copies_files_and_writes_manifest(self) -> None:

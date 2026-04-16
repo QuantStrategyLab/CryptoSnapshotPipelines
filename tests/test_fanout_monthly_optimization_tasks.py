@@ -15,7 +15,7 @@ class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
         self.plan = {
             "source_reviews": [
                 {
-                    "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+                    "source_repo": "QuantStrategyLab/CryptoSnapshotPipelines",
                     "source_issue": {"number": 11, "title": "Monthly Report Review: 2026-04-01"},
                 },
                 {
@@ -56,7 +56,7 @@ class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
     def test_build_marker_and_title_include_owner_repo(self) -> None:
         self.assertEqual(
             build_marker(self.plan, "BinancePlatform"),
-            "<!-- monthly-optimization-task:BinancePlatform:QuantStrategyLab/CryptoLeaderRotation#11|QuantStrategyLab/BinancePlatform#9 -->",
+            "<!-- monthly-optimization-task:BinancePlatform:QuantStrategyLab/CryptoSnapshotPipelines#11|QuantStrategyLab/BinancePlatform#9 -->",
         )
         self.assertEqual(
             build_issue_title(self.plan, "BinancePlatform"),
@@ -67,11 +67,11 @@ class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
         body = build_issue_body(
             self.plan,
             "BinancePlatform",
-            planner_issue_url="https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/20",
+            planner_issue_url="https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/20",
         )
 
         self.assertIn("# Monthly Optimization Tasks · BinancePlatform", body)
-        self.assertIn("Planner issue: https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/20", body)
+        self.assertIn("Planner issue: https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/20", body)
         self.assertIn("Actions in this repo: `2`", body)
         self.assertIn("Highest repo risk: `high`", body)
         self.assertIn("Reconcile March cash flows", body)
@@ -82,7 +82,7 @@ class FanoutMonthlyOptimizationTasksTests(unittest.TestCase):
         body = build_closed_issue_body(
             self.plan,
             "CryptoStrategies",
-            planner_issue_url="https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/20",
+            planner_issue_url="https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/20",
         )
 
         self.assertIn("<!-- monthly-optimization-task:CryptoStrategies:", body)

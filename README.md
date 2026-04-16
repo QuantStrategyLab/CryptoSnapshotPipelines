@@ -1,8 +1,9 @@
-# crypto-leader-rotation
+# CryptoSnapshotPipelines
 
 Language: English | [简体中文](README.zh-CN.md)
 
-`crypto-leader-rotation` is the upstream research and release system for the monthly Binance Spot leader universe.
+`CryptoSnapshotPipelines` is the upstream research, feature-snapshot, and release pipeline repo for crypto strategies.
+The current production artifact family is still the `crypto_leader_rotation` Binance Spot leader universe.
 
 This repository does not place trades and does not contain live execution logic. Its deliverables are the validated upstream artifacts, the monthly reporting layer around those artifacts, and the publish/notification path that keeps downstream execution systems in sync.
 
@@ -18,7 +19,7 @@ Core upstream artifacts:
 
 ## Upstream Boundary
 
-`crypto-leader-rotation` is the single upstream owner for:
+`CryptoSnapshotPipelines` is the single upstream owner for:
 
 - research and walk-forward validation
 - monthly universe selection and live-pool publication
@@ -48,6 +49,8 @@ The repository is now intentionally split into two tracks:
   - not part of the default production publish path
 
 Production v1 is the frozen default path for this repository. The external-data branch stays in the repo, but it is explicitly experimental until it proves stably better than Binance-only across the key walk-forward leader-selection metrics.
+
+The v1 artifact namespace intentionally remains `crypto-leader-rotation` and the live profile remains `crypto_leader_rotation` for downstream compatibility.
 
 The design target is practical rather than flashy:
 
@@ -976,7 +979,7 @@ Documentation-only contract for downstream consumers:
 2. if Firestore is unavailable, read `live_pool_legacy.json`
 3. if both fail, fall back to a static local universe
 
-See [docs/integration_contract.md](/Users/lisiyi/Projects/CryptoLeaderRotation/docs/integration_contract.md) for the precise payload contract and pseudocode.
+See [docs/integration_contract.md](/Users/lisiyi/Projects/CryptoSnapshotPipelines/docs/integration_contract.md) for the precise payload contract and pseudocode.
 
 ### Manual Trigger And Rollback
 
@@ -1113,9 +1116,9 @@ The first external-data priority is not sentiment or on-chain complexity. It is:
 
 Preparation added in this repository:
 
-- [src/external_data.py](/Users/lisiyi/Projects/CryptoLeaderRotation/src/external_data.py)
-- [scripts/validate_external_data.py](/Users/lisiyi/Projects/CryptoLeaderRotation/scripts/validate_external_data.py)
-- [docs/external_data_roadmap.md](/Users/lisiyi/Projects/CryptoLeaderRotation/docs/external_data_roadmap.md)
+- [src/external_data.py](/Users/lisiyi/Projects/CryptoSnapshotPipelines/src/external_data.py)
+- [scripts/validate_external_data.py](/Users/lisiyi/Projects/CryptoSnapshotPipelines/scripts/validate_external_data.py)
+- [docs/external_data_roadmap.md](/Users/lisiyi/Projects/CryptoSnapshotPipelines/docs/external_data_roadmap.md)
 
 The current merge policy is:
 
@@ -1134,7 +1137,7 @@ Local validation of the merge logic:
 
 The current validation snapshot and remaining release blockers are tracked in:
 
-- [docs/validation_status.md](/Users/lisiyi/Projects/CryptoLeaderRotation/docs/validation_status.md)
+- [docs/validation_status.md](/Users/lisiyi/Projects/CryptoSnapshotPipelines/docs/validation_status.md)
 
 That document summarizes:
 

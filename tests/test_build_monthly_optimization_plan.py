@@ -8,7 +8,7 @@ from scripts.build_monthly_optimization_plan import build_plan, render_summary_m
 class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
     def test_build_plan_groups_actions_by_owner_repo(self) -> None:
         upstream_review = {
-            "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+            "source_repo": "QuantStrategyLab/CryptoSnapshotPipelines",
             "review_kind": "upstream_selector",
             "source_issue": {"number": 11, "title": "Monthly Report Review: 2026-04-01", "url": "https://github.com/a/b/issues/11"},
             "risk_level": "medium",
@@ -16,7 +16,7 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
             "summary": "Need more challenger evidence.",
             "recommended_actions": [
                 {
-                    "owner_repo": "CryptoLeaderRotation",
+                    "owner_repo": "CryptoSnapshotPipelines",
                     "title": "Add challenger breadth check",
                     "risk_level": "low",
                     "auto_pr_safe": True,
@@ -47,14 +47,14 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
         plan = build_plan(upstream_review, downstream_review)
 
         self.assertEqual(plan["highest_review_risk"], "medium")
-        self.assertIn("CryptoLeaderRotation", plan["repo_action_summary"])
+        self.assertIn("CryptoSnapshotPipelines", plan["repo_action_summary"])
         self.assertIn("BinancePlatform", plan["repo_action_summary"])
         self.assertEqual(len(plan["safe_auto_pr_candidates"]), 2)
         self.assertEqual(len(plan["experiment_candidates"]), 1)
 
     def test_build_plan_reassigns_reporting_tasks_and_downgrades_manual_checks(self) -> None:
         upstream_review = {
-            "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+            "source_repo": "QuantStrategyLab/CryptoSnapshotPipelines",
             "review_kind": "upstream_selector",
             "source_issue": {"number": 11, "title": "Monthly Report Review: 2026-04-01", "url": "https://github.com/a/b/issues/11"},
             "risk_level": "low",
@@ -108,7 +108,7 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
             "human_review_required": [{}],
             "source_reviews": [
                 {
-                    "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+                    "source_repo": "QuantStrategyLab/CryptoSnapshotPipelines",
                     "risk_level": "medium",
                     "production_recommendation": "research_only",
                     "summary": "Need more evidence.",
@@ -117,13 +117,13 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
                 }
             ],
             "repo_action_summary": {
-                "CryptoLeaderRotation": {
+                "CryptoSnapshotPipelines": {
                     "actions": [
                         {
                             "risk_level": "low",
                             "title": "Add challenger breadth check",
                             "summary": "Improve evidence coverage.",
-                            "source_repo": "QuantStrategyLab/CryptoLeaderRotation",
+                            "source_repo": "QuantStrategyLab/CryptoSnapshotPipelines",
                             "source_issue_number": 11,
                             "auto_pr_safe": True,
                             "experiment_only": True,
@@ -131,13 +131,13 @@ class BuildMonthlyOptimizationPlanTests(unittest.TestCase):
                     ]
                 }
             },
-            "operator_focus": ["QuantStrategyLab/CryptoLeaderRotation: Need more evidence."],
+            "operator_focus": ["QuantStrategyLab/CryptoSnapshotPipelines: Need more evidence."],
         }
 
         markdown = render_summary_markdown(plan)
 
         self.assertIn("# Monthly Optimization Planner", markdown)
-        self.assertIn("QuantStrategyLab/CryptoLeaderRotation", markdown)
+        self.assertIn("QuantStrategyLab/CryptoSnapshotPipelines", markdown)
         self.assertIn("Add challenger breadth check", markdown)
         self.assertIn("Operator Focus", markdown)
 
