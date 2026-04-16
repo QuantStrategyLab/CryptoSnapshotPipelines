@@ -17,7 +17,7 @@ class RenderMonthlyAiReviewTests(unittest.TestCase):
             "recommended_actions": [
                 {
                     "title": "Add another challenger track",
-                    "owner_repo": "CryptoLeaderRotation",
+                    "owner_repo": "CryptoSnapshotPipelines",
                     "risk_level": "low",
                     "auto_pr_safe": True,
                     "experiment_only": True,

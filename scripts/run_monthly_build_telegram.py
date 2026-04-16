@@ -161,7 +161,7 @@ def format_message(payload: dict[str, Any]) -> str:
         else "shadow: not_generated_in_this_run"
     )
     lines = [
-        "CryptoLeaderRotation monthly release",
+        "CryptoSnapshotPipelines monthly release",
         f"status: {payload['status']}",
         f"as_of_date: {payload['as_of_date']}",
         (

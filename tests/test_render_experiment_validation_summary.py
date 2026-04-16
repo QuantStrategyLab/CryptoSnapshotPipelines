@@ -9,7 +9,7 @@ class RenderExperimentValidationSummaryTests(unittest.TestCase):
     def test_build_summary_includes_shadow_track_details(self) -> None:
         payload = {
             "issue_number": 22,
-            "issue_title": "Monthly Optimization Tasks · CryptoLeaderRotation",
+            "issue_title": "Monthly Optimization Tasks · CryptoSnapshotPipelines",
             "should_run": True,
             "experiment_task_count": 1,
             "experiment_actions": [

@@ -4,7 +4,7 @@ name: Monthly Optimization Planner
   workflow_dispatch:
     inputs:
       upstream_run_id:
-        description: "AI review run id from CryptoLeaderRotation"
+        description: "AI review run id from CryptoSnapshotPipelines"
         required: true
       downstream_run_id:
         description: "AI review run id from BinancePlatform"
@@ -49,7 +49,7 @@ jobs:
           private-key: ${{ secrets.CROSS_REPO_GITHUB_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: |
-            CryptoLeaderRotation
+            CryptoSnapshotPipelines
             BinancePlatform
             CryptoStrategies
           permission-actions: write
@@ -151,14 +151,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fan out CryptoLeaderRotation task issue
+      - name: Fan out CryptoSnapshotPipelines task issue
         run: |
           python3 scripts/fanout_monthly_optimization_tasks.py \
             --plan-file data/output/monthly_optimization/optimization_plan.json \
-            --owner-repo CryptoLeaderRotation \
+            --owner-repo CryptoSnapshotPipelines \
             --repo "${GITHUB_REPOSITORY}" \
             --planner-issue-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/issues/${{ steps.optimization_issue.outputs.issue_number }}" \
-            --output-file data/output/monthly_optimization/fanout/crypto_leader_rotation.json
+            --output-file data/output/monthly_optimization/fanout/crypto_snapshot_pipelines.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -213,12 +213,12 @@ jobs:
           from pathlib import Path
 
           fanout = json.loads(
-              Path("data/output/monthly_optimization/fanout/crypto_leader_rotation.json").read_text(encoding="utf-8")
+              Path("data/output/monthly_optimization/fanout/crypto_snapshot_pipelines.json").read_text(encoding="utf-8")
           )
           plan = json.loads(
               Path("data/output/monthly_optimization/optimization_plan.json").read_text(encoding="utf-8")
           )
-          actions = plan.get("repo_action_summary", {}).get("CryptoLeaderRotation", {}).get("actions", [])
+          actions = plan.get("repo_action_summary", {}).get("CryptoSnapshotPipelines", {}).get("actions", [])
           should_dispatch = bool(fanout.get("issue_number")) and fanout.get("status") in {"created", "updated"} and any(
               action.get("experiment_only") for action in actions
           )
@@ -227,7 +227,7 @@ jobs:
               print(f"issue_number={fanout.get('issue_number') or ''}", file=output)
           PY
 
-      - name: Dispatch CryptoLeaderRotation experiment validation
+      - name: Dispatch CryptoSnapshotPipelines experiment validation
         if: steps.upstream_experiment_target.outputs.should_dispatch == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

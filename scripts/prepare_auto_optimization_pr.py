@@ -32,7 +32,7 @@ AUTO_MERGE_SAFE_TERMS = (
     "test coverage",
 )
 AUTO_MERGE_BLOCK_TERMS = {
-    "CryptoLeaderRotation": (
+    "CryptoSnapshotPipelines": (
         "tie-break",
         "tie break",
         "ranking",
@@ -81,7 +81,7 @@ AUTO_MERGE_BLOCK_TERMS = {
     ),
 }
 SENSITIVE_PATH_PATTERNS = {
-    "CryptoLeaderRotation": (
+    "CryptoSnapshotPipelines": (
         r"^src/",
         r"^config/",
     ),
@@ -105,6 +105,14 @@ SENSITIVE_PATH_PATTERNS = {
         r"^src/",
     ),
 }
+
+REPO_NAME_ALIASES = {
+    "CryptoLeaderRotation": "CryptoSnapshotPipelines",
+}
+
+
+def _repo_key(repo_root: Path) -> str:
+    return REPO_NAME_ALIASES.get(repo_root.name, repo_root.name)
 
 
 def parse_actions(issue_body: str) -> list[dict[str, Any]]:
@@ -158,9 +166,9 @@ def _read_text(path: Path) -> str:
 
 def _is_completed_low_risk_task(action: dict[str, Any], repo_root: Path) -> bool:
     title = str(action.get("title", "")).lower()
-    repo_name = repo_root.name
+    repo_name = _repo_key(repo_root)
 
-    if repo_name == "CryptoLeaderRotation":
+    if repo_name == "CryptoSnapshotPipelines":
         if "shadow/challenger build generation" in title or "shadow build" in title:
             workflow = _read_text(repo_root / ".github" / "workflows" / "monthly_publish.yml")
             return "run_monthly_shadow_build.py" in workflow
@@ -198,7 +206,7 @@ def classify_action_for_auto_merge(action: dict[str, Any], repo_root: Path | Non
     if not any(term in text for term in AUTO_MERGE_SAFE_TERMS):
         return False, "task_not_in_auto_merge_allowlist"
 
-    for term in AUTO_MERGE_BLOCK_TERMS.get(repo_root.name, ()):  # pragma: no branch - tiny tuples
+    for term in AUTO_MERGE_BLOCK_TERMS.get(_repo_key(repo_root), ()):  # pragma: no branch - tiny tuples
         if term in text:
             return False, f"guarded_keyword:{term}"
     return True, "auto_merge_safe"
@@ -207,7 +215,7 @@ def classify_action_for_auto_merge(action: dict[str, Any], repo_root: Path | Non
 def evaluate_changed_files(changed_files: list[str], repo_root: Path | None = None) -> dict[str, Any]:
     repo_root = repo_root or PROJECT_ROOT
     blocked_files: list[str] = []
-    patterns = tuple(re.compile(pattern) for pattern in SENSITIVE_PATH_PATTERNS.get(repo_root.name, ()))
+    patterns = tuple(re.compile(pattern) for pattern in SENSITIVE_PATH_PATTERNS.get(_repo_key(repo_root), ()))
     for raw_path in changed_files:
         normalized = raw_path.strip().lstrip("./")
         if not normalized:

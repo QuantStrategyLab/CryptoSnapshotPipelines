@@ -14,19 +14,19 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
     def setUp(self) -> None:
         self.issue_context = {
             "number": 22,
-            "title": "Monthly Optimization Tasks · CryptoLeaderRotation: 2026-04-01 / 2026-03",
-            "body": """# Monthly Optimization Tasks · CryptoLeaderRotation
+            "title": "Monthly Optimization Tasks · CryptoSnapshotPipelines: 2026-04-01 / 2026-03",
+            "body": """# Monthly Optimization Tasks · CryptoSnapshotPipelines
 
 ## Actions
 - [ ] `low` Restore monthly shadow/challenger build generation before review [auto-pr-safe]
   - Summary: Ensure `official_baseline` and `challenger_topk_60` are produced each month.
-  - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
+  - Source: [QuantStrategyLab/CryptoSnapshotPipelines #11](https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/11)
 - [ ] `low` Document and verify tie-breaking for equal scores [auto-pr-safe]
   - Summary: Confirm the secondary sort used for equal scores is deterministic, stable, and documented.
-  - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
+  - Source: [QuantStrategyLab/CryptoSnapshotPipelines #11](https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/11)
 - [ ] `low` Add a boundary tracker [auto-pr-safe, experiment-only]
   - Summary: Track near-cutoff symbols monthly.
-  - Source: [QuantStrategyLab/CryptoLeaderRotation #11](https://github.com/QuantStrategyLab/CryptoLeaderRotation/issues/11)
+  - Source: [QuantStrategyLab/CryptoSnapshotPipelines #11](https://github.com/QuantStrategyLab/CryptoSnapshotPipelines/issues/11)
 """,
         }
 
@@ -37,7 +37,7 @@ class PrepareAutoOptimizationPrTests(unittest.TestCase):
         self.assertEqual(actions[0]["risk_level"], "low")
         self.assertEqual(actions[0]["flags"], ["auto-pr-safe"])
         self.assertEqual(actions[2]["flags"], ["auto-pr-safe", "experiment-only"])
-        self.assertEqual(actions[2]["source_label"], "QuantStrategyLab/CryptoLeaderRotation #11")
+        self.assertEqual(actions[2]["source_label"], "QuantStrategyLab/CryptoSnapshotPipelines #11")
 
     def test_build_payload_skips_completed_clr_tasks_and_excludes_experiments(self) -> None:
         payload = build_payload(self.issue_context, repo_root=PROJECT_ROOT)

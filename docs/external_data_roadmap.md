@@ -32,9 +32,9 @@ Not first priority:
 
 The repository now includes:
 
-- [src/external_data.py](/Users/lisiyi/Projects/CryptoLeaderRotation/src/external_data.py)
-- [scripts/validate_external_data.py](/Users/lisiyi/Projects/CryptoLeaderRotation/scripts/validate_external_data.py)
-- external-data config blocks in [config/default.yaml](/Users/lisiyi/Projects/CryptoLeaderRotation/config/default.yaml)
+- [src/external_data.py](/Users/lisiyi/Projects/CryptoSnapshotPipelines/src/external_data.py)
+- [scripts/validate_external_data.py](/Users/lisiyi/Projects/CryptoSnapshotPipelines/scripts/validate_external_data.py)
+- external-data config blocks in [config/default.yaml](/Users/lisiyi/Projects/CryptoSnapshotPipelines/config/default.yaml)
 
 Implemented concepts:
 

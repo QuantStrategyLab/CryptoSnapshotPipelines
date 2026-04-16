@@ -86,7 +86,7 @@ jobs:
             Return only the final bilingual review in markdown.
             The workflow will publish your final review as the issue comment.
 
-            You are reviewing the monthly upstream selector report for CryptoLeaderRotation.
+            You are reviewing the monthly upstream selector report for CryptoSnapshotPipelines.
             This repository owns monthly universe selection, ranking, challenger evaluation,
             and publication of a 5-symbol Binance Spot leader pool for downstream execution.
 

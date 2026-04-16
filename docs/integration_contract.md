@@ -1,6 +1,7 @@
 # Integration Contract
 
-This document defines the production contract exposed by `crypto-leader-rotation` to downstream strategy systems.
+This document defines the production contract exposed by `CryptoSnapshotPipelines` to downstream strategy systems.
+The current v1 artifact namespace remains `crypto-leader-rotation` for compatibility with existing published objects and downstream readers.
 
 The upstream project publishes a monthly `core_major` live pool and exposes it through:
 
@@ -14,7 +15,7 @@ The upstream project publishes a monthly `core_major` live pool and exposes it t
 
 This profile-aware manifest is the canonical contract wrapper for downstream
 runtimes. It lets the execution platform validate the artifact family without
-binding to `CryptoLeaderRotation` internals.
+binding to `CryptoSnapshotPipelines` internals.
 
 Required stable fields:
 

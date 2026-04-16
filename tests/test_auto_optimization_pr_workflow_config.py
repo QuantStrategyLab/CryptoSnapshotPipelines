@@ -37,7 +37,7 @@ class AutoOptimizationPrWorkflowConfigTests(unittest.TestCase):
         self.assertIn("gh workflow run ci.yml", workflow)
         self.assertIn("fetch-depth: 0", workflow)
         self.assertIn('FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"', workflow)
-        self.assertIn("You are working inside CryptoLeaderRotation, the upstream selector repository.", workflow)
+        self.assertIn("You are working inside CryptoSnapshotPipelines, the upstream selector repository.", workflow)
         self.assertIn("Never edit files under src/ or config/ in this automation step.", workflow)
 
     def test_auto_merge_workflow_waits_for_ci_and_merges_only_safe_ready_prs(self) -> None:
