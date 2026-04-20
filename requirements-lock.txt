@@ -8,4 +8,4 @@ scikit-learn==1.8.0
 scipy==1.17.1
 joblib==1.5.3
 google-cloud-storage==3.10.1
-google-cloud-firestore==2.26.0
+google-cloud-firestore==2.27.0
